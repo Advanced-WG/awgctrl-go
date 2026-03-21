@@ -1,0 +1,136 @@
+package wguser
+
+import (
+	"context"
+	"fmt"
+	"net"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/advanced-wg/awgctrl-go/internal/wginternal"
+	"github.com/advanced-wg/awgctrl-go/wgtypes"
+)
+
+var _ wginternal.Client = &Client{}
+
+// A Client provides access to userspace WireGuard device information.
+type Client struct {
+	dial func(ctx context.Context, device string) (net.Conn, error)
+	find func() ([]string, error)
+}
+
+// New creates a new Client.
+func New() (*Client, error) {
+	return &Client{
+		// Operating system-specific functions which can identify and connect
+		// to userspace WireGuard devices. These functions can also be
+		// overridden for tests.
+		dial: dial,
+		find: find,
+	}, nil
+}
+
+// Close implements wginternal.Client.
+func (c *Client) Close() error { return nil }
+
+// Devices implements wginternal.Client.
+func (c *Client) Devices(ctx context.Context) ([]*wgtypes.Device, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	devices, err := c.find()
+	if err != nil {
+		return nil, err
+	}
+
+	wgds := make([]*wgtypes.Device, 0, len(devices))
+	for _, d := range devices {
+		wgd, err := c.getDevice(ctx, d)
+		if err != nil {
+			return nil, err
+		}
+
+		// Check if the socket resides in an "amneziawg" directory
+		// (e.g. /var/run/amneziawg/device.sock).
+		if isAmneziaSocket(d) {
+			wgd.IsAmnezia = true
+		}
+
+		wgds = append(wgds, wgd)
+	}
+
+	return wgds, nil
+}
+
+// Device implements wginternal.Client.
+func (c *Client) Device(ctx context.Context, name string) (*wgtypes.Device, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	devices, err := c.find()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, d := range devices {
+		if name != deviceName(d) {
+			continue
+		}
+
+		wgd, err := c.getDevice(ctx, d)
+		if err != nil {
+			return nil, err
+		}
+
+		// Check if the socket resides in an "amneziawg" directory.
+		if isAmneziaSocket(d) {
+			wgd.IsAmnezia = true
+		}
+
+		return wgd, nil
+	}
+
+	return nil, os.ErrNotExist
+}
+
+// ConfigureDevice implements wginternal.Client.
+func (c *Client) ConfigureDevice(ctx context.Context, name string, cfg wgtypes.Config) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	devices, err := c.find()
+	if err != nil {
+		return err
+	}
+
+	for _, d := range devices {
+		if name != deviceName(d) {
+			continue
+		}
+
+		return c.configureDevice(ctx, d, cfg)
+	}
+
+	return os.ErrNotExist
+}
+
+// deviceName infers a device name from an absolute file path with extension.
+func deviceName(sock string) string {
+	return strings.TrimSuffix(filepath.Base(sock), filepath.Ext(sock))
+}
+
+// isAmneziaSocket reports whether the socket path belongs to an AmneziaWG
+// device by checking that its parent directory is exactly "amneziawg".
+// This avoids false positives from paths that merely contain the substring
+// (e.g. "/var/run/not-amneziawg-test/wg0.sock").
+func isAmneziaSocket(path string) bool {
+	return filepath.Base(filepath.Dir(path)) == "amneziawg"
+}
+
+func panicf(format string, a ...interface{}) {
+	panic(fmt.Sprintf(format, a...))
+}

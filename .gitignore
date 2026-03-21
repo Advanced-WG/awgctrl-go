@@ -1,0 +1,6 @@
+cmd/wgctrl/wgctrl
+*.test
+
+# IDE
+.claude/
+.vscode/
