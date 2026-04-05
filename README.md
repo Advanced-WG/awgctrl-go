@@ -41,6 +41,13 @@ daemon support.
 - Linux kernel with AmneziaWG module (`modprobe amneziawg`), or `amneziawg-go` userspace daemon
 - Root privileges or `CAP_NET_ADMIN` capability
 
+This library works with **any AmneziaWG v2 kernel module**, including the
+[upstream module](https://github.com/amnezia-vpn/amneziawg-linux-kernel-module).
+For production use we recommend the
+[patched fork](https://github.com/Advanced-WG/amneziawg-linux-kernel-module-awg)
+which fixes netlink dump overflow with many peers, a cookie reply size bug,
+sysfs race conditions, and adds DKMS/kernel 6.19+ compatibility.
+
 AWG kernel and userspace support is Linux-only. Other platforms (FreeBSD, OpenBSD, Windows)
 support standard WireGuard only.
 
