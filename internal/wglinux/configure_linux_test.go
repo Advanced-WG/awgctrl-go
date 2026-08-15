@@ -505,7 +505,7 @@ func TestLinuxClientConfigureDeviceLargePeerIPChunks(t *testing.T) {
 
 // TestLinuxClientConfigureDeviceAWGParams verifies that AmneziaWG device
 // parameters (Jc, Jmin, Jmax, S1-S4, H1-H4, I1-I5) are correctly encoded
-// as netlink attributes when configuring a device.
+// as netlink attributes when configuring a device. Tests AWG 3 encoding.
 func TestLinuxClientConfigureDeviceAWGParams(t *testing.T) {
 	nameAttr := netlink.Attribute{
 		Type: unix.WGDEVICE_A_IFNAME,
@@ -542,10 +542,10 @@ func TestLinuxClientConfigureDeviceAWGParams(t *testing.T) {
 		{Type: WGDEVICE_A_S2, Data: nlenc.Uint16Bytes(40)},
 		{Type: WGDEVICE_A_S3, Data: nlenc.Uint16Bytes(50)},
 		{Type: WGDEVICE_A_S4, Data: nlenc.Uint16Bytes(8)},
-		{Type: WGDEVICE_A_H1, Data: nlenc.Bytes("150000000-200000000")},
-		{Type: WGDEVICE_A_H2, Data: nlenc.Bytes("250000000-300000000")},
-		{Type: WGDEVICE_A_H3, Data: nlenc.Bytes("350000000-400000000")},
-		{Type: WGDEVICE_A_H4, Data: nlenc.Bytes("450000000-500000000")},
+		{Type: WGDEVICE_A_H1, Data: nlenc.Uint64Bytes(uint64(200000000)<<32 | 150000000)},
+		{Type: WGDEVICE_A_H2, Data: nlenc.Uint64Bytes(uint64(300000000)<<32 | 250000000)},
+		{Type: WGDEVICE_A_H3, Data: nlenc.Uint64Bytes(uint64(400000000)<<32 | 350000000)},
+		{Type: WGDEVICE_A_H4, Data: nlenc.Uint64Bytes(uint64(500000000)<<32 | 450000000)},
 		{Type: WGDEVICE_A_I1, Data: nlenc.Bytes("<r 20>")},
 		{Type: WGDEVICE_A_I2, Data: nlenc.Bytes("<r 15>")},
 		{Type: WGDEVICE_A_I3, Data: nlenc.Bytes("<r 12>")},
@@ -566,11 +566,59 @@ func TestLinuxClientConfigureDeviceAWGParams(t *testing.T) {
 		return []genetlink.Message{{}}, nil
 	}
 
-	c := testClient(t, configureHandler(fn))
+	c := testClientWithVersion(t, 3, configureHandler(fn))
 	defer c.Close()
 
 	if err := c.ConfigureDevice(context.Background(), okName, cfg); err != nil {
 		t.Fatalf("failed to configure AWG device: %v", err)
+	}
+}
+
+func TestLinuxClientConfigureDeviceAWGParamsV2(t *testing.T) {
+	strPtr := func(s string) *string { return &s }
+	cfg := wgtypes.Config{
+		H1: strPtr("150000000-200000000"),
+	}
+	wantAttrs := []netlink.Attribute{
+		{Type: unix.WGDEVICE_A_IFNAME, Data: nlenc.Bytes(okName)},
+		{Type: WGDEVICE_A_H1, Data: nlenc.Bytes("150000000-200000000")},
+	}
+	fn := func(greq genetlink.Message, _ netlink.Message) ([]genetlink.Message, error) {
+		attrs, err := netlink.UnmarshalAttributes(greq.Data)
+		if err != nil { return nil, err }
+		if diff := diffAttrs(wantAttrs, attrs); diff != "" {
+			t.Fatalf("unexpected AWG V2 config attributes (-want +got):\n%s", diff)
+		}
+		return []genetlink.Message{{}}, nil
+	}
+	c := testClientWithVersion(t, 2, configureHandler(fn))
+	defer c.Close()
+	if err := c.ConfigureDevice(context.Background(), okName, cfg); err != nil {
+		t.Fatalf("failed to configure AWG device (V2): %v", err)
+	}
+}
+
+func TestLinuxClientConfigureDeviceAWGParamsV1(t *testing.T) {
+	strPtr := func(s string) *string { return &s }
+	cfg := wgtypes.Config{
+		H1: strPtr("150000000-200000000"),
+	}
+	wantAttrs := []netlink.Attribute{
+		{Type: unix.WGDEVICE_A_IFNAME, Data: nlenc.Bytes(okName)},
+		{Type: WGDEVICE_A_H1, Data: nlenc.Uint32Bytes(150000000)},
+	}
+	fn := func(greq genetlink.Message, _ netlink.Message) ([]genetlink.Message, error) {
+		attrs, err := netlink.UnmarshalAttributes(greq.Data)
+		if err != nil { return nil, err }
+		if diff := diffAttrs(wantAttrs, attrs); diff != "" {
+			t.Fatalf("unexpected AWG V1 config attributes (-want +got):\n%s", diff)
+		}
+		return []genetlink.Message{{}}, nil
+	}
+	c := testClientWithVersion(t, 1, configureHandler(fn))
+	defer c.Close()
+	if err := c.ConfigureDevice(context.Background(), okName, cfg); err != nil {
+		t.Fatalf("failed to configure AWG device (V1): %v", err)
 	}
 }
 

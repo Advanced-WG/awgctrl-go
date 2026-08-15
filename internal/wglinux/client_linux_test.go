@@ -347,10 +347,10 @@ func Test_parseRTNLInterfacesAmneziaWG(t *testing.T) {
 
 const familyID = 20
 
-func testClient(t *testing.T, fn genltest.Func) *Client {
+func testClientWithVersion(t *testing.T, version uint8, fn genltest.Func) *Client {
 	family := genetlink.Family{
 		ID:      familyID,
-		Version: unix.WG_GENL_VERSION,
+		Version: version,
 		Name:    unix.WG_GENL_NAME,
 	}
 
@@ -369,6 +369,10 @@ func testClient(t *testing.T, fn genltest.Func) *Client {
 	}
 
 	return c
+}
+
+func testClient(t *testing.T, fn genltest.Func) *Client {
+	return testClientWithVersion(t, unix.WG_GENL_VERSION, fn)
 }
 
 func diffAttrs(x, y []netlink.Attribute) string {
