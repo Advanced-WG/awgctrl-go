@@ -634,10 +634,10 @@ func TestParseDeviceAWGAttributes(t *testing.T) {
 	ae.Uint16(WGDEVICE_A_S2, 40)
 	ae.Uint16(WGDEVICE_A_S3, 50)
 	ae.Uint16(WGDEVICE_A_S4, 8)
-	ae.String(WGDEVICE_A_H1, "123456789-223456789")
-	ae.String(WGDEVICE_A_H2, "300000000-400000000")
-	ae.String(WGDEVICE_A_H3, "500000000-600000000")
-	ae.String(WGDEVICE_A_H4, "700000000-800000000")
+	ae.Uint64(WGDEVICE_A_H1, uint64(223456789)<<32|123456789)
+	ae.Uint64(WGDEVICE_A_H2, uint64(400000000)<<32|300000000)
+	ae.Uint64(WGDEVICE_A_H3, uint64(600000000)<<32|500000000)
+	ae.Uint64(WGDEVICE_A_H4, uint64(800000000)<<32|700000000)
 	ae.String(WGDEVICE_A_I1, "<r 20>")
 	ae.String(WGDEVICE_A_I2, "<r 15>")
 	ae.String(WGDEVICE_A_I3, "<r 12>")
@@ -650,7 +650,7 @@ func TestParseDeviceAWGAttributes(t *testing.T) {
 	}
 
 	msg := genetlink.Message{Data: b}
-	d, err := parseDeviceLoop(msg)
+	d, err := parseDeviceLoop(msg, 3)
 	if err != nil {
 		t.Fatalf("parseDeviceLoop: %v", err)
 	}
@@ -685,6 +685,34 @@ func TestParseDeviceAWGAttributes(t *testing.T) {
 				t.Errorf("got %v, want %v", tt.got, tt.want)
 			}
 		})
+	}
+}
+
+func TestParseDeviceAWGAttributesV2(t *testing.T) {
+	ae := netlink.NewAttributeEncoder()
+	ae.String(WGDEVICE_A_H1, "123456789-223456789")
+	b, _ := ae.Encode()
+
+	d, err := parseDeviceLoop(genetlink.Message{Data: b}, 2)
+	if err != nil {
+		t.Fatalf("parseDeviceLoop: %v", err)
+	}
+	if d.H1 != "123456789-223456789" {
+		t.Errorf("got %q, want %q", d.H1, "123456789-223456789")
+	}
+}
+
+func TestParseDeviceAWGAttributesV1(t *testing.T) {
+	ae := netlink.NewAttributeEncoder()
+	ae.Uint32(WGDEVICE_A_H1, 123456789)
+	b, _ := ae.Encode()
+
+	d, err := parseDeviceLoop(genetlink.Message{Data: b}, 1)
+	if err != nil {
+		t.Fatalf("parseDeviceLoop: %v", err)
+	}
+	if d.H1 != "123456789" {
+		t.Errorf("got %q, want %q", d.H1, "123456789")
 	}
 }
 
@@ -738,7 +766,7 @@ func TestParsePeerAdvancedSecurity(t *testing.T) {
 				}),
 			}
 
-			d, err := parseDeviceLoop(msg)
+			d, err := parseDeviceLoop(msg, 3)
 			if err != nil {
 				t.Fatalf("parseDeviceLoop: %v", err)
 			}
@@ -774,10 +802,10 @@ func TestParseDeviceAWGComplete(t *testing.T) {
 	ae.Uint16(WGDEVICE_A_S2, 35)
 	ae.Uint16(WGDEVICE_A_S3, 45)
 	ae.Uint16(WGDEVICE_A_S4, 10)
-	ae.String(WGDEVICE_A_H1, "150000000-200000000")
-	ae.String(WGDEVICE_A_H2, "250000000-300000000")
-	ae.String(WGDEVICE_A_H3, "350000000-400000000")
-	ae.String(WGDEVICE_A_H4, "450000000-500000000")
+	ae.Uint64(WGDEVICE_A_H1, uint64(200000000)<<32|150000000)
+	ae.Uint64(WGDEVICE_A_H2, uint64(300000000)<<32|250000000)
+	ae.Uint64(WGDEVICE_A_H3, uint64(400000000)<<32|350000000)
+	ae.Uint64(WGDEVICE_A_H4, uint64(500000000)<<32|450000000)
 	ae.String(WGDEVICE_A_I1, "<r 20>")
 	ae.String(WGDEVICE_A_I2, "<r 15>")
 	ae.String(WGDEVICE_A_I3, "<r 12>")
@@ -834,7 +862,7 @@ func TestParseDeviceAWGComplete(t *testing.T) {
 	})...)
 
 	msg := genetlink.Message{Data: fullData}
-	d, err := parseDeviceLoop(msg)
+	d, err := parseDeviceLoop(msg, 3)
 	if err != nil {
 		t.Fatalf("parseDeviceLoop: %v", err)
 	}
@@ -899,7 +927,7 @@ func TestParseDeviceAWGZeroValues(t *testing.T) {
 		t.Fatalf("failed to encode: %v", err)
 	}
 
-	d, err := parseDeviceLoop(genetlink.Message{Data: b})
+	d, err := parseDeviceLoop(genetlink.Message{Data: b}, 3)
 	if err != nil {
 		t.Fatalf("parseDeviceLoop: %v", err)
 	}
