@@ -52,7 +52,7 @@ const (
 
 // configAttrs creates the required encoded netlink attributes to configure
 // the device specified by name using the non-nil fields in cfg.
-func configAttrs(name string, cfg wgtypes.Config) ([]byte, error) {
+func configAttrs(name string, cfg wgtypes.Config, familyVersion uint8) ([]byte, error) {
 	ae := netlink.NewAttributeEncoder()
 	ae.String(unix.WGDEVICE_A_IFNAME, name)
 
@@ -102,17 +102,40 @@ func configAttrs(name string, cfg wgtypes.Config) ([]byte, error) {
 	}
 
 	// String parameters (Magic Headers)
-	if cfg.H1 != nil {
-		ae.String(WGDEVICE_A_H1, *cfg.H1)
+	encodeHField := func(attr uint16, val *string) error {
+		if val == nil {
+			return nil
+		}
+		switch {
+		case familyVersion >= 3:
+			v, err := uintRangeStringToUint64(*val)
+			if err != nil {
+				return err
+			}
+			ae.Uint64(attr, v)
+		case familyVersion >= 2:
+			ae.String(attr, *val)
+		default:
+			v, err := uintRangeStringToUint32(*val)
+			if err != nil {
+				return err
+			}
+			ae.Uint32(attr, v)
+		}
+		return nil
 	}
-	if cfg.H2 != nil {
-		ae.String(WGDEVICE_A_H2, *cfg.H2)
+
+	if err := encodeHField(WGDEVICE_A_H1, cfg.H1); err != nil {
+		return nil, err
 	}
-	if cfg.H3 != nil {
-		ae.String(WGDEVICE_A_H3, *cfg.H3)
+	if err := encodeHField(WGDEVICE_A_H2, cfg.H2); err != nil {
+		return nil, err
 	}
-	if cfg.H4 != nil {
-		ae.String(WGDEVICE_A_H4, *cfg.H4)
+	if err := encodeHField(WGDEVICE_A_H3, cfg.H3); err != nil {
+		return nil, err
+	}
+	if err := encodeHField(WGDEVICE_A_H4, cfg.H4); err != nil {
+		return nil, err
 	}
 
 	// String parameters (Custom Packets)
