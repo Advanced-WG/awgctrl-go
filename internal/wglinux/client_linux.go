@@ -169,7 +169,7 @@ func (c *Client) ConfigureDevice(ctx context.Context, name string, cfg wgtypes.C
 			return err
 		}
 
-		attrs, err := configAttrs(name, batch)
+		attrs, err := configAttrs(name, batch, family.Version)
 		if err != nil {
 			return err
 		}
@@ -227,7 +227,7 @@ func (c *Client) getDeviceInternal(name string, family genetlink.Family) (*wgtyp
 		return nil, err
 	}
 
-	d, err := parseDevice(msgs)
+	d, err := parseDevice(msgs, family.Version)
 	if err != nil {
 		return nil, err
 	}

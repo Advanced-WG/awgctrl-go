@@ -4,6 +4,7 @@
 package wglinux
 
 import (
+	"bytes"
 	"fmt"
 	"net"
 	"time"
@@ -12,18 +13,19 @@ import (
 	"github.com/advanced-wg/awgctrl-go/wgtypes"
 	"github.com/mdlayher/genetlink"
 	"github.com/mdlayher/netlink"
+	"github.com/mdlayher/netlink/nlenc"
 	"golang.org/x/sys/unix"
 )
 
 // parseDevice parses a Device from a slice of generic netlink messages,
 // automatically merging peer lists from subsequent messages into the Device
 // from the first message.
-func parseDevice(msgs []genetlink.Message) (*wgtypes.Device, error) {
+func parseDevice(msgs []genetlink.Message, familyVersion uint8) (*wgtypes.Device, error) {
 	var first wgtypes.Device
 	knownPeers := make(map[wgtypes.Key]int)
 
 	for i, m := range msgs {
-		d, err := parseDeviceLoop(m)
+		d, err := parseDeviceLoop(m, familyVersion)
 		if err != nil {
 			return nil, err
 		}
@@ -50,10 +52,26 @@ func parseDevice(msgs []genetlink.Message) (*wgtypes.Device, error) {
 }
 
 // parseDeviceLoop parses a Device from a single generic netlink message.
-func parseDeviceLoop(m genetlink.Message) (*wgtypes.Device, error) {
+func parseDeviceLoop(m genetlink.Message, familyVersion uint8) (*wgtypes.Device, error) {
 	ad, err := netlink.NewAttributeDecoder(m.Data)
 	if err != nil {
 		return nil, err
+	}
+
+	parseHField := func(target *string) func(b []byte) error {
+		return func(b []byte) error {
+			switch len(b) {
+			case 8: // uint64 (AWG 3)
+				v := nlenc.Uint64(b)
+				*target = uintRangeUint64ToString(v)
+			case 4: // uint32 (AWG 1)
+				v := nlenc.Uint32(b)
+				*target = uintRangeUint32ToString(v)
+			default: // NUL-terminated string (AWG 2)
+				*target = string(bytes.TrimRight(b, "\x00"))
+			}
+			return nil
+		}
 	}
 
 	d := wgtypes.Device{Type: wgtypes.LinuxKernel}
@@ -88,13 +106,13 @@ func parseDeviceLoop(m genetlink.Message) (*wgtypes.Device, error) {
 		case WGDEVICE_A_S4:
 			d.S4 = int(ad.Uint16())
 		case WGDEVICE_A_H1:
-			d.H1 = ad.String()
+			ad.Do(parseHField(&d.H1))
 		case WGDEVICE_A_H2:
-			d.H2 = ad.String()
+			ad.Do(parseHField(&d.H2))
 		case WGDEVICE_A_H3:
-			d.H3 = ad.String()
+			ad.Do(parseHField(&d.H3))
 		case WGDEVICE_A_H4:
-			d.H4 = ad.String()
+			ad.Do(parseHField(&d.H4))
 		case WGDEVICE_A_I1:
 			d.I1 = ad.String()
 		case WGDEVICE_A_I2:
