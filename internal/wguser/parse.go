@@ -121,6 +121,9 @@ func (dp *deviceParser) Parse(key, value string) {
 		dp.parsePeers = true
 		dp.peers++
 
+		dp.hsSec = 0
+		dp.hsNano = 0
+
 		dp.d.Peers = append(dp.d.Peers, wgtypes.Peer{
 			PublicKey: dp.parseKey(value),
 		})
@@ -193,14 +196,12 @@ func (dp *deviceParser) peerParse(key, value string) {
 		p.Endpoint = dp.parseAddr(value)
 	case "last_handshake_time_sec":
 		dp.hsSec = dp.parseInt(value)
+		if dp.hsSec > 0 || dp.hsNano > 0 {
+			p.LastHandshakeTime = time.Unix(int64(dp.hsSec), int64(dp.hsNano))
+		}
 	case "last_handshake_time_nsec":
 		dp.hsNano = dp.parseInt(value)
-
-		// Assume that we've seen both seconds and nanoseconds and populate this
-		// field now. However, if both fields were set to 0, assume we have never
-		// had a successful handshake with this peer, and return a zero-value
-		// time.Time to our callers.
-		if dp.hsSec > 0 && dp.hsNano > 0 {
+		if dp.hsSec > 0 || dp.hsNano > 0 {
 			p.LastHandshakeTime = time.Unix(int64(dp.hsSec), int64(dp.hsNano))
 		}
 	case "tx_bytes":
