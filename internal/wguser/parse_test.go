@@ -42,6 +42,38 @@ errno=0
 
 `
 
+const okAWGGet = `private_key=e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a
+listen_port=12912
+jc=4
+jmin=80
+jmax=160
+s1=20
+s2=35
+s3=45
+s4=10
+h1=150000000-200000000
+h2=250000000-300000000
+h3=350000000-400000000
+h4=450000000-500000000
+i1=<r 20>
+i2=<r 15>
+i3=<r 12>
+i4=<r 18>
+i5=<r 14>
+header_protection_key=e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a
+content_padding_addition=5
+rekey_after_time=10-hi
+rekey_timeout=15
+reject_after_time=20
+keepalive_timeout=25
+max_handshake_attempts=30
+random_trailers=true
+disable_cookies=true
+public_key=b85996fecc9c7f1fc6d2572a76eda11d59bcd20be8e543b15ce4bd85a8e75a33
+errno=0
+
+`
+
 func TestClientDevices(t *testing.T) {
 	// Used to trigger "parse peers" mode easily.
 	const okKey = "public_key=0000000000000000000000000000000000000000000000000000000000000000\n"
@@ -146,6 +178,49 @@ func TestClientDevices(t *testing.T) {
 							},
 						},
 						ProtocolVersion: 1,
+					},
+				},
+			},
+		},
+		{
+			name: "ok awg",
+			res:  []byte(okAWGGet),
+			ok:   true,
+			d: &wgtypes.Device{
+				Name:       testDevice,
+				Type:       wgtypes.Userspace,
+				PrivateKey: wgtypes.Key{0xe8, 0x4b, 0x5a, 0x6d, 0x27, 0x17, 0xc1, 0x0, 0x3a, 0x13, 0xb4, 0x31, 0x57, 0x3, 0x53, 0xdb, 0xac, 0xa9, 0x14, 0x6c, 0xf1, 0x50, 0xc5, 0xf8, 0x57, 0x56, 0x80, 0xfe, 0xba, 0x52, 0x2, 0x7a},
+				PublicKey:  wgtypes.Key{0xc1, 0x53, 0x2e, 0x1b, 0x3d, 0x35, 0x8, 0xfc, 0x7e, 0xbc, 0x35, 0x4f, 0xa6, 0x79, 0x62, 0xf, 0x33, 0xf2, 0x87, 0x14, 0x95, 0x42, 0xe6, 0x84, 0xc6, 0x7b, 0x7b, 0xd, 0x81, 0x36, 0x2b, 0x29},
+				ListenPort: 12912,
+				IsAmnezia:  true,
+				Jc:         4,
+				Jmin:       80,
+				Jmax:       160,
+				S1:         20,
+				S2:         35,
+				S3:         45,
+				S4:         10,
+				H1:         "150000000-200000000",
+				H2:         "250000000-300000000",
+				H3:         "350000000-400000000",
+				H4:         "450000000-500000000",
+				I1:         "<r 20>",
+				I2:         "<r 15>",
+				I3:         "<r 12>",
+				I4:         "<r 18>",
+				I5:         "<r 14>",
+				HeaderProtectionKey:    wgtypes.Key{0xe8, 0x4b, 0x5a, 0x6d, 0x27, 0x17, 0xc1, 0x0, 0x3a, 0x13, 0xb4, 0x31, 0x57, 0x3, 0x53, 0xdb, 0xac, 0xa9, 0x14, 0x6c, 0xf1, 0x50, 0xc5, 0xf8, 0x57, 0x56, 0x80, 0xfe, 0xba, 0x52, 0x2, 0x7a},
+				ContentPaddingAddition: 5,
+				RekeyAfterTime:         10,
+				RekeyTimeout:           15,
+				RejectAfterTime:        20,
+				KeepaliveTimeout:       25,
+				MaxHandshakeAttempts:   30,
+				RandomTrailers:         true,
+				DisableCookies:         true,
+				Peers: []wgtypes.Peer{
+					{
+						PublicKey: wgtypes.Key{0xb8, 0x59, 0x96, 0xfe, 0xcc, 0x9c, 0x7f, 0x1f, 0xc6, 0xd2, 0x57, 0x2a, 0x76, 0xed, 0xa1, 0x1d, 0x59, 0xbc, 0xd2, 0xb, 0xe8, 0xe5, 0x43, 0xb1, 0x5c, 0xe4, 0xbd, 0x85, 0xa8, 0xe7, 0x5a, 0x33},
 					},
 				},
 			},

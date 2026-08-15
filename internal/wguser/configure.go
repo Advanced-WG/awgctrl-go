@@ -130,6 +130,35 @@ func writeConfig(w io.Writer, cfg wgtypes.Config) {
 		fmt.Fprintf(w, "i5=%s\n", *cfg.I5)
 	}
 
+	// --- AmneziaWG 3.0 Configuration ---
+	if cfg.HeaderProtectionKey != nil {
+		fmt.Fprintf(w, "header_protection_key=%s\n", hexKey(*cfg.HeaderProtectionKey))
+	}
+	if cfg.ContentPaddingAddition != nil {
+		fmt.Fprintf(w, "content_padding_addition=%d\n", *cfg.ContentPaddingAddition)
+	}
+	if cfg.RekeyAfterTime != nil {
+		fmt.Fprintf(w, "rekey_after_time=%d\n", *cfg.RekeyAfterTime)
+	}
+	if cfg.RekeyTimeout != nil {
+		fmt.Fprintf(w, "rekey_timeout=%d\n", *cfg.RekeyTimeout)
+	}
+	if cfg.RejectAfterTime != nil {
+		fmt.Fprintf(w, "reject_after_time=%d\n", *cfg.RejectAfterTime)
+	}
+	if cfg.KeepaliveTimeout != nil {
+		fmt.Fprintf(w, "keepalive_timeout=%d\n", *cfg.KeepaliveTimeout)
+	}
+	if cfg.MaxHandshakeAttempts != nil {
+		fmt.Fprintf(w, "max_handshake_attempts=%d\n", *cfg.MaxHandshakeAttempts)
+	}
+	if cfg.RandomTrailers != nil {
+		fmt.Fprintf(w, "random_trailers=%t\n", *cfg.RandomTrailers)
+	}
+	if cfg.DisableCookies != nil {
+		fmt.Fprintf(w, "disable_cookies=%t\n", *cfg.DisableCookies)
+	}
+
 	// --- AmneziaWG Parameters End ---
 
 	if cfg.ReplacePeers {

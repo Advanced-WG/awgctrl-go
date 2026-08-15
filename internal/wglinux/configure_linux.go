@@ -36,6 +36,16 @@ const (
 	WGDEVICE_A_I4 = 24
 	WGDEVICE_A_I5 = 25
 
+	WGDEVICE_A_HEADER_PROTECTION_KEY    = 26
+	WGDEVICE_A_CONTENT_PADDING_ADDITION = 27
+	WGDEVICE_A_REKEY_AFTER_TIME         = 28
+	WGDEVICE_A_REKEY_TIMEOUT            = 29
+	WGDEVICE_A_REJECT_AFTER_TIME        = 30
+	WGDEVICE_A_KEEPALIVE_TIMEOUT        = 31
+	WGDEVICE_A_MAX_HANDSHAKE_ATTEMPTS   = 32
+	WGDEVICE_A_RANDOM_TRAILERS          = 33
+	WGDEVICE_A_DISABLE_COOKIES          = 34
+
 	// WGPEER_A_ADVANCED_SECURITY is an NLA_FLAG attribute on the peer.
 	// Kernel sends it when peer->advanced_security is true.
 	// Value = 11 (UNSPEC=0, PUBLIC_KEY=1, PRESHARED_KEY=2, FLAGS=3,
@@ -154,6 +164,43 @@ func configAttrs(name string, cfg wgtypes.Config, familyVersion uint8) ([]byte, 
 	if cfg.I5 != nil {
 		ae.String(WGDEVICE_A_I5, *cfg.I5)
 	}
+
+	// --- AmneziaWG 3.0 Specific Configuration ---
+	if cfg.HeaderProtectionKey != nil {
+		ae.Bytes(WGDEVICE_A_HEADER_PROTECTION_KEY, (*cfg.HeaderProtectionKey)[:])
+	}
+	if cfg.ContentPaddingAddition != nil {
+		ae.Uint32(WGDEVICE_A_CONTENT_PADDING_ADDITION, uint32(*cfg.ContentPaddingAddition))
+	}
+	if cfg.RekeyAfterTime != nil {
+		ae.Uint32(WGDEVICE_A_REKEY_AFTER_TIME, uint32(*cfg.RekeyAfterTime))
+	}
+	if cfg.RekeyTimeout != nil {
+		ae.Uint32(WGDEVICE_A_REKEY_TIMEOUT, uint32(*cfg.RekeyTimeout))
+	}
+	if cfg.RejectAfterTime != nil {
+		ae.Uint32(WGDEVICE_A_REJECT_AFTER_TIME, uint32(*cfg.RejectAfterTime))
+	}
+	if cfg.KeepaliveTimeout != nil {
+		ae.Uint32(WGDEVICE_A_KEEPALIVE_TIMEOUT, uint32(*cfg.KeepaliveTimeout))
+	}
+	if cfg.MaxHandshakeAttempts != nil {
+		ae.Uint32(WGDEVICE_A_MAX_HANDSHAKE_ATTEMPTS, uint32(*cfg.MaxHandshakeAttempts))
+	}
+	if cfg.RandomTrailers != nil {
+		var v uint8
+		if *cfg.RandomTrailers {
+			v = 1
+		}
+		ae.Uint8(WGDEVICE_A_RANDOM_TRAILERS, v)
+	}
+	if cfg.DisableCookies != nil {
+		var v uint8
+		if *cfg.DisableCookies {
+			v = 1
+		}
+		ae.Uint8(WGDEVICE_A_DISABLE_COOKIES, v)
+	}
 	// -------------------------------------------------------------------------
 
 	// Only apply peer attributes if necessary.
@@ -231,6 +278,16 @@ func buildBatches(cfg wgtypes.Config) []wgtypes.Config {
 	base.I3 = nil
 	base.I4 = nil
 	base.I5 = nil
+
+	base.HeaderProtectionKey = nil
+	base.ContentPaddingAddition = nil
+	base.RekeyAfterTime = nil
+	base.RekeyTimeout = nil
+	base.RejectAfterTime = nil
+	base.KeepaliveTimeout = nil
+	base.MaxHandshakeAttempts = nil
+	base.RandomTrailers = nil
+	base.DisableCookies = nil
 
 	// Track the known peers so that peer IPs are not replaced if a single
 	// peer has its allowed IPs split into multiple batches.

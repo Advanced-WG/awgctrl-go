@@ -123,6 +123,24 @@ func parseDeviceLoop(m genetlink.Message, familyVersion uint8) (*wgtypes.Device,
 			d.I4 = ad.String()
 		case WGDEVICE_A_I5:
 			d.I5 = ad.String()
+		case WGDEVICE_A_HEADER_PROTECTION_KEY:
+			ad.Do(parseKey(&d.HeaderProtectionKey))
+		case WGDEVICE_A_CONTENT_PADDING_ADDITION:
+			d.ContentPaddingAddition = int(ad.Uint32())
+		case WGDEVICE_A_REKEY_AFTER_TIME:
+			d.RekeyAfterTime = int(ad.Uint32())
+		case WGDEVICE_A_REKEY_TIMEOUT:
+			d.RekeyTimeout = int(ad.Uint32())
+		case WGDEVICE_A_REJECT_AFTER_TIME:
+			d.RejectAfterTime = int(ad.Uint32())
+		case WGDEVICE_A_KEEPALIVE_TIMEOUT:
+			d.KeepaliveTimeout = int(ad.Uint32())
+		case WGDEVICE_A_MAX_HANDSHAKE_ATTEMPTS:
+			d.MaxHandshakeAttempts = int(ad.Uint32())
+		case WGDEVICE_A_RANDOM_TRAILERS:
+			d.RandomTrailers = ad.Uint8() != 0
+		case WGDEVICE_A_DISABLE_COOKIES:
+			d.DisableCookies = ad.Uint8() != 0
 		case unix.WGDEVICE_A_PEERS:
 			// Netlink array of peers.
 			//

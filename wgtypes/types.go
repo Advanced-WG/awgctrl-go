@@ -112,6 +112,25 @@ type Device struct {
 	I4 string
 	I5 string
 
+	// --- AmneziaWG 3.0 Specific Fields ---
+
+	// HeaderProtectionKey is the 32-byte key used for packet header protection.
+	HeaderProtectionKey Key
+
+	// ContentPaddingAddition defines how much padding is added to data packets (in bytes).
+	ContentPaddingAddition int
+
+	// Timeouts and limits for the noise protocol
+	RekeyAfterTime       int // in seconds
+	RekeyTimeout         int // in seconds
+	RejectAfterTime      int // in seconds
+	KeepaliveTimeout     int // in seconds
+	MaxHandshakeAttempts int
+
+	// Additional obfuscation flags
+	RandomTrailers bool
+	DisableCookies bool
+
 	// Peers is the list of network peers associated with this device.
 	Peers []Peer
 }
@@ -313,6 +332,25 @@ type Config struct {
 	I3 *string
 	I4 *string
 	I5 *string
+
+	// --- AmneziaWG 3.0 Specific Configuration ---
+
+	// HeaderProtectionKey is the 32-byte key used for packet header protection.
+	HeaderProtectionKey *Key
+
+	// ContentPaddingAddition defines how much padding is added to data packets (in bytes).
+	ContentPaddingAddition *int
+
+	// Timeouts and limits for the noise protocol
+	RekeyAfterTime       *int // in seconds
+	RekeyTimeout         *int // in seconds
+	RejectAfterTime      *int // in seconds
+	KeepaliveTimeout     *int // in seconds
+	MaxHandshakeAttempts *int
+
+	// Additional obfuscation flags
+	RandomTrailers *bool
+	DisableCookies *bool
 }
 
 // GenerateAmneziaParams populates the config with obfuscation values optimized for AWG 2.0.

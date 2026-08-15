@@ -178,6 +178,24 @@ func (dp *deviceParser) Parse(key, value string) {
 		dp.d.I4 = value
 	case "i5":
 		dp.d.I5 = value
+	case "header_protection_key":
+		dp.d.HeaderProtectionKey = dp.parseKey(value)
+	case "content_padding_addition":
+		dp.d.ContentPaddingAddition = dp.parseIntRange(value)
+	case "rekey_after_time":
+		dp.d.RekeyAfterTime = dp.parseIntRange(value)
+	case "rekey_timeout":
+		dp.d.RekeyTimeout = dp.parseIntRange(value)
+	case "reject_after_time":
+		dp.d.RejectAfterTime = dp.parseIntRange(value)
+	case "keepalive_timeout":
+		dp.d.KeepaliveTimeout = dp.parseIntRange(value)
+	case "max_handshake_attempts":
+		dp.d.MaxHandshakeAttempts = dp.parseIntRange(value)
+	case "random_trailers":
+		dp.d.RandomTrailers = value == "true"
+	case "disable_cookies":
+		dp.d.DisableCookies = value == "true"
 	}
 }
 
@@ -254,6 +272,20 @@ func (dp *deviceParser) parseInt(s string) int {
 	}
 
 	return v
+}
+
+// parseIntRange parses an integer from a string, handling optional "-hi" ranges by taking the lower bound.
+func (dp *deviceParser) parseIntRange(s string) int {
+	if dp.err != nil {
+		return 0
+	}
+	for i := 0; i < len(s); i++ {
+		if s[i] == '-' {
+			s = s[:i]
+			break
+		}
+	}
+	return dp.parseInt(s)
 }
 
 // parseInt64 parses an int64 from a string.

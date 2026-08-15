@@ -643,6 +643,15 @@ func TestParseDeviceAWGAttributes(t *testing.T) {
 	ae.String(WGDEVICE_A_I3, "<r 12>")
 	ae.String(WGDEVICE_A_I4, "<r 18>")
 	ae.String(WGDEVICE_A_I5, "<r 14>")
+	ae.Bytes(WGDEVICE_A_HEADER_PROTECTION_KEY, keyBytes("e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a"))
+	ae.Uint32(WGDEVICE_A_CONTENT_PADDING_ADDITION, 5)
+	ae.Uint32(WGDEVICE_A_REKEY_AFTER_TIME, 10)
+	ae.Uint32(WGDEVICE_A_REKEY_TIMEOUT, 15)
+	ae.Uint32(WGDEVICE_A_REJECT_AFTER_TIME, 20)
+	ae.Uint32(WGDEVICE_A_KEEPALIVE_TIMEOUT, 25)
+	ae.Uint32(WGDEVICE_A_MAX_HANDSHAKE_ATTEMPTS, 30)
+	ae.Uint8(WGDEVICE_A_RANDOM_TRAILERS, 1)
+	ae.Uint8(WGDEVICE_A_DISABLE_COOKIES, 1)
 
 	b, err := ae.Encode()
 	if err != nil {
@@ -677,6 +686,15 @@ func TestParseDeviceAWGAttributes(t *testing.T) {
 		{"I3", d.I3, "<r 12>"},
 		{"I4", d.I4, "<r 18>"},
 		{"I5", d.I5, "<r 14>"},
+		{"HeaderProtectionKey", d.HeaderProtectionKey, wgtest.MustHexKey("e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a")},
+		{"ContentPaddingAddition", d.ContentPaddingAddition, 5},
+		{"RekeyAfterTime", d.RekeyAfterTime, 10},
+		{"RekeyTimeout", d.RekeyTimeout, 15},
+		{"RejectAfterTime", d.RejectAfterTime, 20},
+		{"KeepaliveTimeout", d.KeepaliveTimeout, 25},
+		{"MaxHandshakeAttempts", d.MaxHandshakeAttempts, 30},
+		{"RandomTrailers", d.RandomTrailers, true},
+		{"DisableCookies", d.DisableCookies, true},
 	}
 
 	for _, tt := range tests {
@@ -872,6 +890,15 @@ func TestParseDeviceAWGComplete(t *testing.T) {
 	ae.String(WGDEVICE_A_I3, "<r 12>")
 	ae.String(WGDEVICE_A_I4, "<r 18>")
 	ae.String(WGDEVICE_A_I5, "<r 14>")
+	ae.Bytes(WGDEVICE_A_HEADER_PROTECTION_KEY, keyBytes("e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a"))
+	ae.Uint32(WGDEVICE_A_CONTENT_PADDING_ADDITION, 5)
+	ae.Uint32(WGDEVICE_A_REKEY_AFTER_TIME, 10)
+	ae.Uint32(WGDEVICE_A_REKEY_TIMEOUT, 15)
+	ae.Uint32(WGDEVICE_A_REJECT_AFTER_TIME, 20)
+	ae.Uint32(WGDEVICE_A_KEEPALIVE_TIMEOUT, 25)
+	ae.Uint32(WGDEVICE_A_MAX_HANDSHAKE_ATTEMPTS, 30)
+	ae.Uint8(WGDEVICE_A_RANDOM_TRAILERS, 1)
+	ae.Uint8(WGDEVICE_A_DISABLE_COOKIES, 1)
 
 	b, err := ae.Encode()
 	if err != nil {
@@ -948,6 +975,15 @@ func TestParseDeviceAWGComplete(t *testing.T) {
 		I3:         "<r 12>",
 		I4:         "<r 18>",
 		I5:         "<r 14>",
+		HeaderProtectionKey:    wgtest.MustHexKey("e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a"),
+		ContentPaddingAddition: 5,
+		RekeyAfterTime:         10,
+		RekeyTimeout:           15,
+		RejectAfterTime:        20,
+		KeepaliveTimeout:       25,
+		MaxHandshakeAttempts:   30,
+		RandomTrailers:         true,
+		DisableCookies:         true,
 		Peers: []wgtypes.Peer{
 			{
 				PublicKey: peerKey,

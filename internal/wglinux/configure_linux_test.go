@@ -513,6 +513,7 @@ func TestLinuxClientConfigureDeviceAWGParams(t *testing.T) {
 	}
 
 	strPtr := func(s string) *string { return &s }
+	boolPtr := func(b bool) *bool { return &b }
 
 	cfg := wgtypes.Config{
 		Jc:   intPtr(5),
@@ -531,6 +532,15 @@ func TestLinuxClientConfigureDeviceAWGParams(t *testing.T) {
 		I3:   strPtr("<r 12>"),
 		I4:   strPtr("<r 18>"),
 		I5:   strPtr("<r 14>"),
+		HeaderProtectionKey:    keyPtr(wgtest.MustHexKey("e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a")),
+		ContentPaddingAddition: intPtr(5),
+		RekeyAfterTime:         intPtr(10),
+		RekeyTimeout:           intPtr(15),
+		RejectAfterTime:        intPtr(20),
+		KeepaliveTimeout:       intPtr(25),
+		MaxHandshakeAttempts:   intPtr(30),
+		RandomTrailers:         boolPtr(true),
+		DisableCookies:         boolPtr(true),
 	}
 
 	wantAttrs := []netlink.Attribute{
@@ -551,6 +561,15 @@ func TestLinuxClientConfigureDeviceAWGParams(t *testing.T) {
 		{Type: WGDEVICE_A_I3, Data: nlenc.Bytes("<r 12>")},
 		{Type: WGDEVICE_A_I4, Data: nlenc.Bytes("<r 18>")},
 		{Type: WGDEVICE_A_I5, Data: nlenc.Bytes("<r 14>")},
+		{Type: WGDEVICE_A_HEADER_PROTECTION_KEY, Data: keyBytes("e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a")},
+		{Type: WGDEVICE_A_CONTENT_PADDING_ADDITION, Data: nlenc.Uint32Bytes(5)},
+		{Type: WGDEVICE_A_REKEY_AFTER_TIME, Data: nlenc.Uint32Bytes(10)},
+		{Type: WGDEVICE_A_REKEY_TIMEOUT, Data: nlenc.Uint32Bytes(15)},
+		{Type: WGDEVICE_A_REJECT_AFTER_TIME, Data: nlenc.Uint32Bytes(20)},
+		{Type: WGDEVICE_A_KEEPALIVE_TIMEOUT, Data: nlenc.Uint32Bytes(25)},
+		{Type: WGDEVICE_A_MAX_HANDSHAKE_ATTEMPTS, Data: nlenc.Uint32Bytes(30)},
+		{Type: WGDEVICE_A_RANDOM_TRAILERS, Data: []byte{1}},
+		{Type: WGDEVICE_A_DISABLE_COOKIES, Data: []byte{1}},
 	}
 
 	fn := func(greq genetlink.Message, _ netlink.Message) ([]genetlink.Message, error) {
@@ -790,6 +809,7 @@ func TestLinuxClientConfigureDevicePeerNoAdvancedSecurity(t *testing.T) {
 // subsequent batches when a large configuration is split.
 func TestBuildBatchesAWGParamsFirstBatchOnly(t *testing.T) {
 	strPtr := func(s string) *string { return &s }
+	boolPtr := func(b bool) *bool { return &b }
 
 	// Create a config with AWG params and enough IPs to trigger batching.
 	peerKey := wgtest.MustPublicKey()
@@ -810,6 +830,15 @@ func TestBuildBatchesAWGParamsFirstBatchOnly(t *testing.T) {
 		I3:   strPtr("<r 12>"),
 		I4:   strPtr("<r 13>"),
 		I5:   strPtr("<r 14>"),
+		HeaderProtectionKey:    keyPtr(wgtest.MustHexKey("e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a")),
+		ContentPaddingAddition: intPtr(5),
+		RekeyAfterTime:         intPtr(10),
+		RekeyTimeout:           intPtr(15),
+		RejectAfterTime:        intPtr(20),
+		KeepaliveTimeout:       intPtr(25),
+		MaxHandshakeAttempts:   intPtr(30),
+		RandomTrailers:         boolPtr(true),
+		DisableCookies:         boolPtr(true),
 		Peers: []wgtypes.PeerConfig{
 			{
 				PublicKey:  peerKey,
@@ -849,6 +878,9 @@ func TestBuildBatchesAWGParamsFirstBatchOnly(t *testing.T) {
 		}
 		if b.I1 != nil || b.I2 != nil || b.I3 != nil || b.I4 != nil || b.I5 != nil {
 			t.Errorf("batch %d: I1-I5 should be nil", i)
+		}
+		if b.HeaderProtectionKey != nil || b.ContentPaddingAddition != nil || b.RekeyAfterTime != nil || b.RekeyTimeout != nil || b.RejectAfterTime != nil || b.KeepaliveTimeout != nil || b.MaxHandshakeAttempts != nil || b.RandomTrailers != nil || b.DisableCookies != nil {
+			t.Errorf("batch %d: AWG 3 fields should be nil", i)
 		}
 	}
 }

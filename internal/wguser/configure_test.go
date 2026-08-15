@@ -40,6 +40,35 @@ remove=true
 
 `
 
+const okAWGSet = `set=1
+jc=4
+jmin=80
+jmax=160
+s1=20
+s2=35
+s3=45
+s4=10
+h1=150000000-200000000
+h2=250000000-300000000
+h3=350000000-400000000
+h4=450000000-500000000
+i1=<r 20>
+i2=<r 15>
+i3=<r 12>
+i4=<r 18>
+i5=<r 14>
+header_protection_key=e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a
+content_padding_addition=5
+rekey_after_time=10
+rekey_timeout=15
+reject_after_time=20
+keepalive_timeout=25
+max_handshake_attempts=30
+random_trailers=true
+disable_cookies=true
+
+`
+
 func TestClientConfigureDeviceError(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -81,6 +110,8 @@ func TestClientConfigureDeviceError(t *testing.T) {
 }
 
 func TestClientConfigureDeviceOK(t *testing.T) {
+	strPtr := func(s string) *string { return &s }
+	boolPtr := func(b bool) *bool { return &b }
 	tests := []struct {
 		name string
 		cfg  wgtypes.Config
@@ -140,6 +171,37 @@ func TestClientConfigureDeviceOK(t *testing.T) {
 				},
 			},
 			req: okSet,
+		},
+		{
+			name: "ok, awg",
+			cfg: wgtypes.Config{
+				Jc:   intPtr(4),
+				Jmin: intPtr(80),
+				Jmax: intPtr(160),
+				S1:   intPtr(20),
+				S2:   intPtr(35),
+				S3:   intPtr(45),
+				S4:   intPtr(10),
+				H1:   strPtr("150000000-200000000"),
+				H2:   strPtr("250000000-300000000"),
+				H3:   strPtr("350000000-400000000"),
+				H4:   strPtr("450000000-500000000"),
+				I1:   strPtr("<r 20>"),
+				I2:   strPtr("<r 15>"),
+				I3:   strPtr("<r 12>"),
+				I4:   strPtr("<r 18>"),
+				I5:   strPtr("<r 14>"),
+				HeaderProtectionKey:    keyPtr(wgtest.MustHexKey("e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a")),
+				ContentPaddingAddition: intPtr(5),
+				RekeyAfterTime:         intPtr(10),
+				RekeyTimeout:           intPtr(15),
+				RejectAfterTime:        intPtr(20),
+				KeepaliveTimeout:       intPtr(25),
+				MaxHandshakeAttempts:   intPtr(30),
+				RandomTrailers:         boolPtr(true),
+				DisableCookies:         boolPtr(true),
+			},
+			req: okAWGSet,
 		},
 	}
 
