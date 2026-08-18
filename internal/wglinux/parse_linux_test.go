@@ -716,6 +716,67 @@ func TestParseDeviceAWGAttributesV1(t *testing.T) {
 	}
 }
 
+func TestParsePeerPersistentKeepalive(t *testing.T) {
+	var testKey wgtypes.Key
+	testKey[0] = 0xab
+
+	tests := []struct {
+		name string
+		data []byte
+		want time.Duration
+	}{
+		{
+			name: "uint16 wireguard/awg1/awg2",
+			data: nlenc.Uint16Bytes(25),
+			want: 25 * time.Second,
+		},
+		{
+			name: "uint32 packed u16_range awg3",
+			// hi<<16 | lo, both 25: a naive Uint32()*Second would be ~19 days.
+			data: nlenc.Uint32Bytes(uint32(25)<<16 | 25),
+			want: 25 * time.Second,
+		},
+		{
+			name: "uint32 packed range uses lo",
+			data: nlenc.Uint32Bytes(uint32(40)<<16 | 10),
+			want: 10 * time.Second,
+		},
+		{
+			name: "zero",
+			data: nlenc.Uint16Bytes(0),
+			want: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			msg := genetlink.Message{
+				Data: m(netlink.Attribute{
+					Type: unix.WGDEVICE_A_PEERS,
+					Data: m(netlink.Attribute{
+						Type: 0,
+						Data: m([]netlink.Attribute{
+							{Type: unix.WGPEER_A_PUBLIC_KEY, Data: testKey[:]},
+							{Type: unix.WGPEER_A_PERSISTENT_KEEPALIVE_INTERVAL, Data: tt.data},
+						}...),
+					}),
+				}),
+			}
+
+			d, err := parseDeviceLoop(msg, 3)
+			if err != nil {
+				t.Fatalf("parseDeviceLoop: %v", err)
+			}
+			if len(d.Peers) != 1 {
+				t.Fatalf("expected 1 peer, got %d", len(d.Peers))
+			}
+			if d.Peers[0].PersistentKeepaliveInterval != tt.want {
+				t.Errorf("got %v, want %v", d.Peers[0].PersistentKeepaliveInterval, tt.want)
+			}
+		})
+	}
+}
+
 // TestParsePeerAdvancedSecurity verifies that the WGPEER_A_ADVANCED_SECURITY
 // NLA_FLAG attribute is correctly parsed as a boolean on the Peer struct.
 func TestParsePeerAdvancedSecurity(t *testing.T) {

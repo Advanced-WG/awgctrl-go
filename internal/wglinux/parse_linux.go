@@ -163,7 +163,7 @@ func parsePeer(ad *netlink.AttributeDecoder) wgtypes.Peer {
 			p.Endpoint = &net.UDPAddr{}
 			ad.Do(parseSockaddr(p.Endpoint))
 		case unix.WGPEER_A_PERSISTENT_KEEPALIVE_INTERVAL:
-			p.PersistentKeepaliveInterval = time.Duration(ad.Uint16()) * time.Second
+			ad.Do(parsePersistentKeepalive(&p.PersistentKeepaliveInterval))
 		case unix.WGPEER_A_LAST_HANDSHAKE_TIME:
 			ad.Do(parseTimespec(&p.LastHandshakeTime))
 		case unix.WGPEER_A_RX_BYTES:
@@ -227,6 +227,26 @@ func parseAllowedIPs(ipns *[]net.IPNet) func(ad *netlink.AttributeDecoder) error
 			})
 		}
 
+		return nil
+	}
+}
+
+// parsePersistentKeepalive parses WGPEER_A_PERSISTENT_KEEPALIVE_INTERVAL.
+// WireGuard and AWG 1/2 send NLA_U16 seconds. AWG 3 sends a packed
+// u16_range (hi<<16 | lo) as NLA_U32. The public API is a single
+// time.Duration, so only lo is kept.
+func parsePersistentKeepalive(d *time.Duration) func(b []byte) error {
+	return func(b []byte) error {
+		var seconds uint16
+		switch len(b) {
+		case 2:
+			seconds = nlenc.Uint16(b)
+		case 4:
+			seconds = uint16(nlenc.Uint32(b))
+		default:
+			return fmt.Errorf("wglinux: unexpected keepalive size: %d", len(b))
+		}
+		*d = time.Duration(seconds) * time.Second
 		return nil
 	}
 }
