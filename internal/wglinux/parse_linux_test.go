@@ -644,12 +644,12 @@ func TestParseDeviceAWGAttributes(t *testing.T) {
 	ae.String(WGDEVICE_A_I4, "<r 18>")
 	ae.String(WGDEVICE_A_I5, "<r 14>")
 	ae.Bytes(WGDEVICE_A_HEADER_PROTECTION_KEY, keyBytes("e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a"))
-	ae.Uint32(WGDEVICE_A_CONTENT_PADDING_ADDITION, 5)
-	ae.Uint32(WGDEVICE_A_REKEY_AFTER_TIME, 10)
-	ae.Uint32(WGDEVICE_A_REKEY_TIMEOUT, 15)
-	ae.Uint32(WGDEVICE_A_REJECT_AFTER_TIME, 20)
-	ae.Uint32(WGDEVICE_A_KEEPALIVE_TIMEOUT, 25)
-	ae.Uint32(WGDEVICE_A_MAX_HANDSHAKE_ATTEMPTS, 30)
+	ae.Uint32(WGDEVICE_A_CONTENT_PADDING_ADDITION, wgtypes.UintRange{Min: 10, Max: 100}.PackU16())
+	ae.Uint32(WGDEVICE_A_REKEY_AFTER_TIME, wgtypes.UintRange{Min: 10, Max: 10}.PackU16())
+	ae.Uint32(WGDEVICE_A_REKEY_TIMEOUT, wgtypes.UintRange{Min: 15, Max: 15}.PackU16())
+	ae.Uint32(WGDEVICE_A_REJECT_AFTER_TIME, wgtypes.UintRange{Min: 20, Max: 20}.PackU16())
+	ae.Uint32(WGDEVICE_A_KEEPALIVE_TIMEOUT, wgtypes.UintRange{Min: 25, Max: 25}.PackU16())
+	ae.Uint32(WGDEVICE_A_MAX_HANDSHAKE_ATTEMPTS, wgtypes.UintRange{Min: 30, Max: 30}.PackU16())
 	ae.Uint8(WGDEVICE_A_RANDOM_TRAILERS, 1)
 	ae.Uint8(WGDEVICE_A_DISABLE_COOKIES, 1)
 
@@ -687,12 +687,12 @@ func TestParseDeviceAWGAttributes(t *testing.T) {
 		{"I4", d.I4, "<r 18>"},
 		{"I5", d.I5, "<r 14>"},
 		{"HeaderProtectionKey", d.HeaderProtectionKey, wgtest.MustHexKey("e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a")},
-		{"ContentPaddingAddition", d.ContentPaddingAddition, 5},
-		{"RekeyAfterTime", d.RekeyAfterTime, 10},
-		{"RekeyTimeout", d.RekeyTimeout, 15},
-		{"RejectAfterTime", d.RejectAfterTime, 20},
-		{"KeepaliveTimeout", d.KeepaliveTimeout, 25},
-		{"MaxHandshakeAttempts", d.MaxHandshakeAttempts, 30},
+		{"ContentPaddingAddition", d.ContentPaddingAddition, wgtypes.UintRange{Min: 10, Max: 100}},
+		{"RekeyAfterTime", d.RekeyAfterTime, wgtypes.UintRange{Min: 10, Max: 10}},
+		{"RekeyTimeout", d.RekeyTimeout, wgtypes.UintRange{Min: 15, Max: 15}},
+		{"RejectAfterTime", d.RejectAfterTime, wgtypes.UintRange{Min: 20, Max: 20}},
+		{"KeepaliveTimeout", d.KeepaliveTimeout, wgtypes.UintRange{Min: 25, Max: 25}},
+		{"MaxHandshakeAttempts", d.MaxHandshakeAttempts, wgtypes.UintRange{Min: 30, Max: 30}},
 		{"RandomTrailers", d.RandomTrailers, true},
 		{"DisableCookies", d.DisableCookies, true},
 	}
@@ -891,12 +891,12 @@ func TestParseDeviceAWGComplete(t *testing.T) {
 	ae.String(WGDEVICE_A_I4, "<r 18>")
 	ae.String(WGDEVICE_A_I5, "<r 14>")
 	ae.Bytes(WGDEVICE_A_HEADER_PROTECTION_KEY, keyBytes("e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a"))
-	ae.Uint32(WGDEVICE_A_CONTENT_PADDING_ADDITION, 5)
-	ae.Uint32(WGDEVICE_A_REKEY_AFTER_TIME, 10)
-	ae.Uint32(WGDEVICE_A_REKEY_TIMEOUT, 15)
-	ae.Uint32(WGDEVICE_A_REJECT_AFTER_TIME, 20)
-	ae.Uint32(WGDEVICE_A_KEEPALIVE_TIMEOUT, 25)
-	ae.Uint32(WGDEVICE_A_MAX_HANDSHAKE_ATTEMPTS, 30)
+	ae.Uint32(WGDEVICE_A_CONTENT_PADDING_ADDITION, wgtypes.UintRange{Min: 10, Max: 100}.PackU16())
+	ae.Uint32(WGDEVICE_A_REKEY_AFTER_TIME, wgtypes.UintRange{Min: 10, Max: 10}.PackU16())
+	ae.Uint32(WGDEVICE_A_REKEY_TIMEOUT, wgtypes.UintRange{Min: 15, Max: 15}.PackU16())
+	ae.Uint32(WGDEVICE_A_REJECT_AFTER_TIME, wgtypes.UintRange{Min: 20, Max: 20}.PackU16())
+	ae.Uint32(WGDEVICE_A_KEEPALIVE_TIMEOUT, wgtypes.UintRange{Min: 25, Max: 25}.PackU16())
+	ae.Uint32(WGDEVICE_A_MAX_HANDSHAKE_ATTEMPTS, wgtypes.UintRange{Min: 30, Max: 30}.PackU16())
 	ae.Uint8(WGDEVICE_A_RANDOM_TRAILERS, 1)
 	ae.Uint8(WGDEVICE_A_DISABLE_COOKIES, 1)
 
@@ -956,32 +956,32 @@ func TestParseDeviceAWGComplete(t *testing.T) {
 	}
 
 	want := &wgtypes.Device{
-		Name:       "awg0",
-		Type:       wgtypes.LinuxKernel,
-		ListenPort: 51820,
-		Jc:         4,
-		Jmin:       80,
-		Jmax:       160,
-		S1:         20,
-		S2:         35,
-		S3:         45,
-		S4:         10,
-		H1:         "150000000-200000000",
-		H2:         "250000000-300000000",
-		H3:         "350000000-400000000",
-		H4:         "450000000-500000000",
-		I1:         "<r 20>",
-		I2:         "<r 15>",
-		I3:         "<r 12>",
-		I4:         "<r 18>",
-		I5:         "<r 14>",
+		Name:                   "awg0",
+		Type:                   wgtypes.LinuxKernel,
+		ListenPort:             51820,
+		Jc:                     4,
+		Jmin:                   80,
+		Jmax:                   160,
+		S1:                     20,
+		S2:                     35,
+		S3:                     45,
+		S4:                     10,
+		H1:                     "150000000-200000000",
+		H2:                     "250000000-300000000",
+		H3:                     "350000000-400000000",
+		H4:                     "450000000-500000000",
+		I1:                     "<r 20>",
+		I2:                     "<r 15>",
+		I3:                     "<r 12>",
+		I4:                     "<r 18>",
+		I5:                     "<r 14>",
 		HeaderProtectionKey:    wgtest.MustHexKey("e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a"),
-		ContentPaddingAddition: 5,
-		RekeyAfterTime:         10,
-		RekeyTimeout:           15,
-		RejectAfterTime:        20,
-		KeepaliveTimeout:       25,
-		MaxHandshakeAttempts:   30,
+		ContentPaddingAddition: wgtypes.UintRange{Min: 10, Max: 100},
+		RekeyAfterTime:         wgtypes.UintRange{Min: 10, Max: 10},
+		RekeyTimeout:           wgtypes.UintRange{Min: 15, Max: 15},
+		RejectAfterTime:        wgtypes.UintRange{Min: 20, Max: 20},
+		KeepaliveTimeout:       wgtypes.UintRange{Min: 25, Max: 25},
+		MaxHandshakeAttempts:   wgtypes.UintRange{Min: 30, Max: 30},
 		RandomTrailers:         true,
 		DisableCookies:         true,
 		Peers: []wgtypes.Peer{
@@ -1034,5 +1034,22 @@ func TestParseDeviceAWGZeroValues(t *testing.T) {
 	}
 	if d.S1 != 0 || d.S2 != 0 || d.S3 != 0 || d.S4 != 0 {
 		t.Errorf("expected zero padding, got S1=%d S2=%d S3=%d S4=%d", d.S1, d.S2, d.S3, d.S4)
+	}
+}
+
+func TestParseDeviceAWG3LegacySingleU32(t *testing.T) {
+	ae := netlink.NewAttributeEncoder()
+	ae.Uint32(WGDEVICE_A_CONTENT_PADDING_ADDITION, 5)
+	b, err := ae.Encode()
+	if err != nil {
+		t.Fatal(err)
+	}
+	d, err := parseDeviceLoop(genetlink.Message{Data: b}, 3)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := wgtypes.UintRange{Min: 5, Max: 5}
+	if d.ContentPaddingAddition != want {
+		t.Errorf("legacy u32 5 = %+v, want %+v", d.ContentPaddingAddition, want)
 	}
 }

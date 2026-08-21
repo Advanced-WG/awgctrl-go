@@ -181,17 +181,17 @@ func (dp *deviceParser) Parse(key, value string) {
 	case "header_protection_key":
 		dp.d.HeaderProtectionKey = dp.parseKey(value)
 	case "content_padding_addition":
-		dp.d.ContentPaddingAddition = dp.parseIntRange(value)
+		dp.d.ContentPaddingAddition = dp.parseUintRange(value)
 	case "rekey_after_time":
-		dp.d.RekeyAfterTime = dp.parseIntRange(value)
+		dp.d.RekeyAfterTime = dp.parseUintRange(value)
 	case "rekey_timeout":
-		dp.d.RekeyTimeout = dp.parseIntRange(value)
+		dp.d.RekeyTimeout = dp.parseUintRange(value)
 	case "reject_after_time":
-		dp.d.RejectAfterTime = dp.parseIntRange(value)
+		dp.d.RejectAfterTime = dp.parseUintRange(value)
 	case "keepalive_timeout":
-		dp.d.KeepaliveTimeout = dp.parseIntRange(value)
+		dp.d.KeepaliveTimeout = dp.parseUintRange(value)
 	case "max_handshake_attempts":
-		dp.d.MaxHandshakeAttempts = dp.parseIntRange(value)
+		dp.d.MaxHandshakeAttempts = dp.parseUintRange(value)
 	case "random_trailers":
 		dp.d.RandomTrailers = value == "true"
 	case "disable_cookies":
@@ -274,18 +274,17 @@ func (dp *deviceParser) parseInt(s string) int {
 	return v
 }
 
-// parseIntRange parses an integer from a string, handling optional "-hi" ranges by taking the lower bound.
-func (dp *deviceParser) parseIntRange(s string) int {
+// parseUintRange parses an AWG 3 UAPI range ("10" or "10-100").
+func (dp *deviceParser) parseUintRange(s string) wgtypes.UintRange {
 	if dp.err != nil {
-		return 0
+		return wgtypes.UintRange{}
 	}
-	for i := 0; i < len(s); i++ {
-		if s[i] == '-' {
-			s = s[:i]
-			break
-		}
+	r, err := wgtypes.ParseUintRange(s)
+	if err != nil {
+		dp.err = err
+		return wgtypes.UintRange{}
 	}
-	return dp.parseInt(s)
+	return r
 }
 
 // parseInt64 parses an int64 from a string.

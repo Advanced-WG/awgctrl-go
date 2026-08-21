@@ -135,22 +135,22 @@ func writeConfig(w io.Writer, cfg wgtypes.Config) {
 		fmt.Fprintf(w, "header_protection_key=%s\n", hexKey(*cfg.HeaderProtectionKey))
 	}
 	if cfg.ContentPaddingAddition != nil {
-		fmt.Fprintf(w, "content_padding_addition=%d\n", *cfg.ContentPaddingAddition)
+		fmt.Fprintf(w, "content_padding_addition=%s\n", cfg.ContentPaddingAddition.String())
 	}
 	if cfg.RekeyAfterTime != nil {
-		fmt.Fprintf(w, "rekey_after_time=%d\n", *cfg.RekeyAfterTime)
+		fmt.Fprintf(w, "rekey_after_time=%s\n", cfg.RekeyAfterTime.String())
 	}
 	if cfg.RekeyTimeout != nil {
-		fmt.Fprintf(w, "rekey_timeout=%d\n", *cfg.RekeyTimeout)
+		fmt.Fprintf(w, "rekey_timeout=%s\n", cfg.RekeyTimeout.String())
 	}
 	if cfg.RejectAfterTime != nil {
-		fmt.Fprintf(w, "reject_after_time=%d\n", *cfg.RejectAfterTime)
+		fmt.Fprintf(w, "reject_after_time=%s\n", cfg.RejectAfterTime.String())
 	}
 	if cfg.KeepaliveTimeout != nil {
-		fmt.Fprintf(w, "keepalive_timeout=%d\n", *cfg.KeepaliveTimeout)
+		fmt.Fprintf(w, "keepalive_timeout=%s\n", cfg.KeepaliveTimeout.String())
 	}
 	if cfg.MaxHandshakeAttempts != nil {
-		fmt.Fprintf(w, "max_handshake_attempts=%d\n", *cfg.MaxHandshakeAttempts)
+		fmt.Fprintf(w, "max_handshake_attempts=%s\n", cfg.MaxHandshakeAttempts.String())
 	}
 	if cfg.RandomTrailers != nil {
 		fmt.Fprintf(w, "random_trailers=%t\n", *cfg.RandomTrailers)

@@ -117,15 +117,15 @@ type Device struct {
 	// HeaderProtectionKey is the 32-byte key used for packet header protection.
 	HeaderProtectionKey Key
 
-	// ContentPaddingAddition defines how much padding is added to data packets (in bytes).
-	ContentPaddingAddition int
+	// ContentPaddingAddition is extra transport padding in bytes (AWG 3 range).
+	ContentPaddingAddition UintRange
 
-	// Timeouts and limits for the noise protocol
-	RekeyAfterTime       int // in seconds
-	RekeyTimeout         int // in seconds
-	RejectAfterTime      int // in seconds
-	KeepaliveTimeout     int // in seconds
-	MaxHandshakeAttempts int
+	// Timeouts and limits for the noise protocol (AWG 3 ranges, seconds / attempts).
+	RekeyAfterTime       UintRange
+	RekeyTimeout         UintRange
+	RejectAfterTime      UintRange
+	KeepaliveTimeout     UintRange
+	MaxHandshakeAttempts UintRange
 
 	// Additional obfuscation flags
 	RandomTrailers bool
@@ -338,15 +338,15 @@ type Config struct {
 	// HeaderProtectionKey is the 32-byte key used for packet header protection.
 	HeaderProtectionKey *Key
 
-	// ContentPaddingAddition defines how much padding is added to data packets (in bytes).
-	ContentPaddingAddition *int
+	// ContentPaddingAddition is extra transport padding in bytes (AWG 3 range).
+	ContentPaddingAddition *UintRange
 
-	// Timeouts and limits for the noise protocol
-	RekeyAfterTime       *int // in seconds
-	RekeyTimeout         *int // in seconds
-	RejectAfterTime      *int // in seconds
-	KeepaliveTimeout     *int // in seconds
-	MaxHandshakeAttempts *int
+	// Timeouts and limits for the noise protocol (AWG 3 ranges, seconds / attempts).
+	RekeyAfterTime       *UintRange
+	RekeyTimeout         *UintRange
+	RejectAfterTime      *UintRange
+	KeepaliveTimeout     *UintRange
+	MaxHandshakeAttempts *UintRange
 
 	// Additional obfuscation flags
 	RandomTrailers *bool

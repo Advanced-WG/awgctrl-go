@@ -131,3 +131,7 @@ func testClient(t *testing.T, res []byte) (*Client, func() []byte) {
 func durPtr(d time.Duration) *time.Duration { return &d }
 func keyPtr(k wgtypes.Key) *wgtypes.Key     { return &k }
 func intPtr(v int) *int                     { return &v }
+func rangePtr(min, max int) *wgtypes.UintRange {
+	r := wgtypes.UintRange{Min: min, Max: max}
+	return &r
+}

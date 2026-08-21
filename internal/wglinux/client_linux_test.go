@@ -432,6 +432,14 @@ func configureHandler(fn genltest.Func) genltest.Func {
 func durPtr(d time.Duration) *time.Duration { return &d }
 func keyPtr(k wgtypes.Key) *wgtypes.Key     { return &k }
 func intPtr(v int) *int                     { return &v }
+func rangePtr(min, max int) *wgtypes.UintRange {
+	r := wgtypes.UintRange{Min: min, Max: max}
+	return &r
+}
+
+func packedU16Range(lo, hi uint16) []byte {
+	return nlenc.Uint32Bytes(uint32(hi)<<16 | uint32(lo))
+}
 
 func panicf(format string, a ...interface{}) {
 	panic(fmt.Sprintf(format, a...))

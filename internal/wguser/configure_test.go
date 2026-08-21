@@ -58,7 +58,7 @@ i3=<r 12>
 i4=<r 18>
 i5=<r 14>
 header_protection_key=e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a
-content_padding_addition=5
+content_padding_addition=10-100
 rekey_after_time=10
 rekey_timeout=15
 reject_after_time=20
@@ -175,29 +175,29 @@ func TestClientConfigureDeviceOK(t *testing.T) {
 		{
 			name: "ok, awg",
 			cfg: wgtypes.Config{
-				Jc:   intPtr(4),
-				Jmin: intPtr(80),
-				Jmax: intPtr(160),
-				S1:   intPtr(20),
-				S2:   intPtr(35),
-				S3:   intPtr(45),
-				S4:   intPtr(10),
-				H1:   strPtr("150000000-200000000"),
-				H2:   strPtr("250000000-300000000"),
-				H3:   strPtr("350000000-400000000"),
-				H4:   strPtr("450000000-500000000"),
-				I1:   strPtr("<r 20>"),
-				I2:   strPtr("<r 15>"),
-				I3:   strPtr("<r 12>"),
-				I4:   strPtr("<r 18>"),
-				I5:   strPtr("<r 14>"),
+				Jc:                     intPtr(4),
+				Jmin:                   intPtr(80),
+				Jmax:                   intPtr(160),
+				S1:                     intPtr(20),
+				S2:                     intPtr(35),
+				S3:                     intPtr(45),
+				S4:                     intPtr(10),
+				H1:                     strPtr("150000000-200000000"),
+				H2:                     strPtr("250000000-300000000"),
+				H3:                     strPtr("350000000-400000000"),
+				H4:                     strPtr("450000000-500000000"),
+				I1:                     strPtr("<r 20>"),
+				I2:                     strPtr("<r 15>"),
+				I3:                     strPtr("<r 12>"),
+				I4:                     strPtr("<r 18>"),
+				I5:                     strPtr("<r 14>"),
 				HeaderProtectionKey:    keyPtr(wgtest.MustHexKey("e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a")),
-				ContentPaddingAddition: intPtr(5),
-				RekeyAfterTime:         intPtr(10),
-				RekeyTimeout:           intPtr(15),
-				RejectAfterTime:        intPtr(20),
-				KeepaliveTimeout:       intPtr(25),
-				MaxHandshakeAttempts:   intPtr(30),
+				ContentPaddingAddition: rangePtr(10, 100),
+				RekeyAfterTime:         rangePtr(10, 10),
+				RekeyTimeout:           rangePtr(15, 15),
+				RejectAfterTime:        rangePtr(20, 20),
+				KeepaliveTimeout:       rangePtr(25, 25),
+				MaxHandshakeAttempts:   rangePtr(30, 30),
 				RandomTrailers:         boolPtr(true),
 				DisableCookies:         boolPtr(true),
 			},

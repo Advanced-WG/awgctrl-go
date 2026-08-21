@@ -170,22 +170,22 @@ func configAttrs(name string, cfg wgtypes.Config, familyVersion uint8) ([]byte, 
 		ae.Bytes(WGDEVICE_A_HEADER_PROTECTION_KEY, (*cfg.HeaderProtectionKey)[:])
 	}
 	if cfg.ContentPaddingAddition != nil {
-		ae.Uint32(WGDEVICE_A_CONTENT_PADDING_ADDITION, uint32(*cfg.ContentPaddingAddition))
+		ae.Uint32(WGDEVICE_A_CONTENT_PADDING_ADDITION, cfg.ContentPaddingAddition.PackU16())
 	}
 	if cfg.RekeyAfterTime != nil {
-		ae.Uint32(WGDEVICE_A_REKEY_AFTER_TIME, uint32(*cfg.RekeyAfterTime))
+		ae.Uint32(WGDEVICE_A_REKEY_AFTER_TIME, cfg.RekeyAfterTime.PackU16())
 	}
 	if cfg.RekeyTimeout != nil {
-		ae.Uint32(WGDEVICE_A_REKEY_TIMEOUT, uint32(*cfg.RekeyTimeout))
+		ae.Uint32(WGDEVICE_A_REKEY_TIMEOUT, cfg.RekeyTimeout.PackU16())
 	}
 	if cfg.RejectAfterTime != nil {
-		ae.Uint32(WGDEVICE_A_REJECT_AFTER_TIME, uint32(*cfg.RejectAfterTime))
+		ae.Uint32(WGDEVICE_A_REJECT_AFTER_TIME, cfg.RejectAfterTime.PackU16())
 	}
 	if cfg.KeepaliveTimeout != nil {
-		ae.Uint32(WGDEVICE_A_KEEPALIVE_TIMEOUT, uint32(*cfg.KeepaliveTimeout))
+		ae.Uint32(WGDEVICE_A_KEEPALIVE_TIMEOUT, cfg.KeepaliveTimeout.PackU16())
 	}
 	if cfg.MaxHandshakeAttempts != nil {
-		ae.Uint32(WGDEVICE_A_MAX_HANDSHAKE_ATTEMPTS, uint32(*cfg.MaxHandshakeAttempts))
+		ae.Uint32(WGDEVICE_A_MAX_HANDSHAKE_ATTEMPTS, cfg.MaxHandshakeAttempts.PackU16())
 	}
 	if cfg.RandomTrailers != nil {
 		var v uint8

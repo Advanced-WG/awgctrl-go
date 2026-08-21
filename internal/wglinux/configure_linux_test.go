@@ -516,29 +516,29 @@ func TestLinuxClientConfigureDeviceAWGParams(t *testing.T) {
 	boolPtr := func(b bool) *bool { return &b }
 
 	cfg := wgtypes.Config{
-		Jc:   intPtr(5),
-		Jmin: intPtr(100),
-		Jmax: intPtr(200),
-		S1:   intPtr(30),
-		S2:   intPtr(40),
-		S3:   intPtr(50),
-		S4:   intPtr(8),
-		H1:   strPtr("150000000-200000000"),
-		H2:   strPtr("250000000-300000000"),
-		H3:   strPtr("350000000-400000000"),
-		H4:   strPtr("450000000-500000000"),
-		I1:   strPtr("<r 20>"),
-		I2:   strPtr("<r 15>"),
-		I3:   strPtr("<r 12>"),
-		I4:   strPtr("<r 18>"),
-		I5:   strPtr("<r 14>"),
+		Jc:                     intPtr(5),
+		Jmin:                   intPtr(100),
+		Jmax:                   intPtr(200),
+		S1:                     intPtr(30),
+		S2:                     intPtr(40),
+		S3:                     intPtr(50),
+		S4:                     intPtr(8),
+		H1:                     strPtr("150000000-200000000"),
+		H2:                     strPtr("250000000-300000000"),
+		H3:                     strPtr("350000000-400000000"),
+		H4:                     strPtr("450000000-500000000"),
+		I1:                     strPtr("<r 20>"),
+		I2:                     strPtr("<r 15>"),
+		I3:                     strPtr("<r 12>"),
+		I4:                     strPtr("<r 18>"),
+		I5:                     strPtr("<r 14>"),
 		HeaderProtectionKey:    keyPtr(wgtest.MustHexKey("e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a")),
-		ContentPaddingAddition: intPtr(5),
-		RekeyAfterTime:         intPtr(10),
-		RekeyTimeout:           intPtr(15),
-		RejectAfterTime:        intPtr(20),
-		KeepaliveTimeout:       intPtr(25),
-		MaxHandshakeAttempts:   intPtr(30),
+		ContentPaddingAddition: rangePtr(10, 100),
+		RekeyAfterTime:         rangePtr(10, 10),
+		RekeyTimeout:           rangePtr(15, 15),
+		RejectAfterTime:        rangePtr(20, 20),
+		KeepaliveTimeout:       rangePtr(25, 25),
+		MaxHandshakeAttempts:   rangePtr(30, 30),
 		RandomTrailers:         boolPtr(true),
 		DisableCookies:         boolPtr(true),
 	}
@@ -562,12 +562,12 @@ func TestLinuxClientConfigureDeviceAWGParams(t *testing.T) {
 		{Type: WGDEVICE_A_I4, Data: nlenc.Bytes("<r 18>")},
 		{Type: WGDEVICE_A_I5, Data: nlenc.Bytes("<r 14>")},
 		{Type: WGDEVICE_A_HEADER_PROTECTION_KEY, Data: keyBytes("e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a")},
-		{Type: WGDEVICE_A_CONTENT_PADDING_ADDITION, Data: nlenc.Uint32Bytes(5)},
-		{Type: WGDEVICE_A_REKEY_AFTER_TIME, Data: nlenc.Uint32Bytes(10)},
-		{Type: WGDEVICE_A_REKEY_TIMEOUT, Data: nlenc.Uint32Bytes(15)},
-		{Type: WGDEVICE_A_REJECT_AFTER_TIME, Data: nlenc.Uint32Bytes(20)},
-		{Type: WGDEVICE_A_KEEPALIVE_TIMEOUT, Data: nlenc.Uint32Bytes(25)},
-		{Type: WGDEVICE_A_MAX_HANDSHAKE_ATTEMPTS, Data: nlenc.Uint32Bytes(30)},
+		{Type: WGDEVICE_A_CONTENT_PADDING_ADDITION, Data: packedU16Range(10, 100)},
+		{Type: WGDEVICE_A_REKEY_AFTER_TIME, Data: packedU16Range(10, 10)},
+		{Type: WGDEVICE_A_REKEY_TIMEOUT, Data: packedU16Range(15, 15)},
+		{Type: WGDEVICE_A_REJECT_AFTER_TIME, Data: packedU16Range(20, 20)},
+		{Type: WGDEVICE_A_KEEPALIVE_TIMEOUT, Data: packedU16Range(25, 25)},
+		{Type: WGDEVICE_A_MAX_HANDSHAKE_ATTEMPTS, Data: packedU16Range(30, 30)},
 		{Type: WGDEVICE_A_RANDOM_TRAILERS, Data: []byte{1}},
 		{Type: WGDEVICE_A_DISABLE_COOKIES, Data: []byte{1}},
 	}
@@ -604,7 +604,9 @@ func TestLinuxClientConfigureDeviceAWGParamsV2(t *testing.T) {
 	}
 	fn := func(greq genetlink.Message, _ netlink.Message) ([]genetlink.Message, error) {
 		attrs, err := netlink.UnmarshalAttributes(greq.Data)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		if diff := diffAttrs(wantAttrs, attrs); diff != "" {
 			t.Fatalf("unexpected AWG V2 config attributes (-want +got):\n%s", diff)
 		}
@@ -628,7 +630,9 @@ func TestLinuxClientConfigureDeviceAWGParamsV1(t *testing.T) {
 	}
 	fn := func(greq genetlink.Message, _ netlink.Message) ([]genetlink.Message, error) {
 		attrs, err := netlink.UnmarshalAttributes(greq.Data)
-		if err != nil { return nil, err }
+		if err != nil {
+			return nil, err
+		}
 		if diff := diffAttrs(wantAttrs, attrs); diff != "" {
 			t.Fatalf("unexpected AWG V1 config attributes (-want +got):\n%s", diff)
 		}
@@ -814,29 +818,29 @@ func TestBuildBatchesAWGParamsFirstBatchOnly(t *testing.T) {
 	// Create a config with AWG params and enough IPs to trigger batching.
 	peerKey := wgtest.MustPublicKey()
 	cfg := wgtypes.Config{
-		Jc:   intPtr(5),
-		Jmin: intPtr(100),
-		Jmax: intPtr(200),
-		S1:   intPtr(30),
-		S2:   intPtr(40),
-		S3:   intPtr(50),
-		S4:   intPtr(8),
-		H1:   strPtr("111-222"),
-		H2:   strPtr("333-444"),
-		H3:   strPtr("555-666"),
-		H4:   strPtr("777-888"),
-		I1:   strPtr("<r 10>"),
-		I2:   strPtr("<r 11>"),
-		I3:   strPtr("<r 12>"),
-		I4:   strPtr("<r 13>"),
-		I5:   strPtr("<r 14>"),
+		Jc:                     intPtr(5),
+		Jmin:                   intPtr(100),
+		Jmax:                   intPtr(200),
+		S1:                     intPtr(30),
+		S2:                     intPtr(40),
+		S3:                     intPtr(50),
+		S4:                     intPtr(8),
+		H1:                     strPtr("111-222"),
+		H2:                     strPtr("333-444"),
+		H3:                     strPtr("555-666"),
+		H4:                     strPtr("777-888"),
+		I1:                     strPtr("<r 10>"),
+		I2:                     strPtr("<r 11>"),
+		I3:                     strPtr("<r 12>"),
+		I4:                     strPtr("<r 13>"),
+		I5:                     strPtr("<r 14>"),
 		HeaderProtectionKey:    keyPtr(wgtest.MustHexKey("e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a")),
-		ContentPaddingAddition: intPtr(5),
-		RekeyAfterTime:         intPtr(10),
-		RekeyTimeout:           intPtr(15),
-		RejectAfterTime:        intPtr(20),
-		KeepaliveTimeout:       intPtr(25),
-		MaxHandshakeAttempts:   intPtr(30),
+		ContentPaddingAddition: rangePtr(10, 100),
+		RekeyAfterTime:         rangePtr(10, 10),
+		RekeyTimeout:           rangePtr(15, 15),
+		RejectAfterTime:        rangePtr(20, 20),
+		KeepaliveTimeout:       rangePtr(25, 25),
+		MaxHandshakeAttempts:   rangePtr(30, 30),
 		RandomTrailers:         boolPtr(true),
 		DisableCookies:         boolPtr(true),
 		Peers: []wgtypes.PeerConfig{
