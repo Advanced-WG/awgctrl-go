@@ -8,7 +8,7 @@ import (
 	"testing"
 	"unsafe"
 
-	"github.com/advanced-wg/awgctrl-go/internal/wgfreebsd/internal/nv"
+	"github.com/awg-go/awgctrl-go/internal/wgfreebsd/internal/nv"
 )
 
 func TestMarshaling(t *testing.T) {

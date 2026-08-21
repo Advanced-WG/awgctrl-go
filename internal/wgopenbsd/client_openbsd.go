@@ -14,9 +14,9 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/advanced-wg/awgctrl-go/internal/wginternal"
-	"github.com/advanced-wg/awgctrl-go/internal/wgopenbsd/internal/wgh"
-	"github.com/advanced-wg/awgctrl-go/wgtypes"
+	"github.com/awg-go/awgctrl-go/internal/wginternal"
+	"github.com/awg-go/awgctrl-go/internal/wgopenbsd/internal/wgh"
+	"github.com/awg-go/awgctrl-go/wgtypes"
 	"golang.org/x/sys/unix"
 )
 

@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/advanced-wg/awgctrl-go/wgtypes"
+	"github.com/awg-go/awgctrl-go/wgtypes"
 )
 
 // The WireGuard userspace configuration protocol is described here:

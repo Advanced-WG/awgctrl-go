@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/advanced-wg/awgctrl-go"
-	"github.com/advanced-wg/awgctrl-go/internal/wginternal"
-	"github.com/advanced-wg/awgctrl-go/internal/wgtest"
-	"github.com/advanced-wg/awgctrl-go/wgtypes"
+	"github.com/awg-go/awgctrl-go"
+	"github.com/awg-go/awgctrl-go/internal/wginternal"
+	"github.com/awg-go/awgctrl-go/internal/wgtest"
+	"github.com/awg-go/awgctrl-go/wgtypes"
 	"github.com/google/go-cmp/cmp"
 	"github.com/mikioh/ipaddr"
 )

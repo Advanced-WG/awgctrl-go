@@ -14,7 +14,7 @@ import (
     "fmt"
     "log"
 
-    wgctrl "github.com/advanced-wg/awgctrl-go"
+    wgctrl "github.com/awg-go/awgctrl-go"
 )
 
 func main() {
@@ -57,8 +57,8 @@ import (
     "context"
     "log"
 
-    wgctrl "github.com/advanced-wg/awgctrl-go"
-    "github.com/advanced-wg/awgctrl-go/wgtypes"
+    wgctrl "github.com/awg-go/awgctrl-go"
+    "github.com/awg-go/awgctrl-go/wgtypes"
 )
 
 func main() {
@@ -97,8 +97,8 @@ import (
     "context"
     "log"
 
-    wgctrl "github.com/advanced-wg/awgctrl-go"
-    "github.com/advanced-wg/awgctrl-go/wgtypes"
+    wgctrl "github.com/awg-go/awgctrl-go"
+    "github.com/awg-go/awgctrl-go/wgtypes"
 )
 
 func intPtr(i int) *int    { return &i }
@@ -159,8 +159,8 @@ import (
     "log"
     "net"
 
-    wgctrl "github.com/advanced-wg/awgctrl-go"
-    "github.com/advanced-wg/awgctrl-go/wgtypes"
+    wgctrl "github.com/awg-go/awgctrl-go"
+    "github.com/awg-go/awgctrl-go/wgtypes"
 )
 
 func main() {
@@ -214,7 +214,7 @@ import (
     "log"
     "time"
 
-    wgctrl "github.com/advanced-wg/awgctrl-go"
+    wgctrl "github.com/awg-go/awgctrl-go"
 )
 
 func main() {
@@ -269,7 +269,7 @@ import (
     "log"
     "time"
 
-    wgctrl "github.com/advanced-wg/awgctrl-go"
+    wgctrl "github.com/awg-go/awgctrl-go"
 )
 
 func main() {

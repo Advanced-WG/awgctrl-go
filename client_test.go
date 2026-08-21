@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/advanced-wg/awgctrl-go/internal/wginternal"
-	"github.com/advanced-wg/awgctrl-go/wgtypes"
+	"github.com/awg-go/awgctrl-go/internal/wginternal"
+	"github.com/awg-go/awgctrl-go/wgtypes"
 	"github.com/google/go-cmp/cmp"
 )
 

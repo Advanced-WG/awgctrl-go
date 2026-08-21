@@ -4,9 +4,9 @@
 package wgctrl
 
 import (
-	"github.com/advanced-wg/awgctrl-go/internal/wginternal"
-	"github.com/advanced-wg/awgctrl-go/internal/wguser"
-	"github.com/advanced-wg/awgctrl-go/internal/wgwindows"
+	"github.com/awg-go/awgctrl-go/internal/wginternal"
+	"github.com/awg-go/awgctrl-go/internal/wguser"
+	"github.com/awg-go/awgctrl-go/internal/wgwindows"
 )
 
 // newClients configures wginternal.Clients for Windows systems.

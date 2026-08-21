@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/advanced-wg/awgctrl-go/internal/wginternal"
-	"github.com/advanced-wg/awgctrl-go/wgtypes"
+	"github.com/awg-go/awgctrl-go/internal/wginternal"
+	"github.com/awg-go/awgctrl-go/wgtypes"
 )
 
 var _ wginternal.Client = &Client{}

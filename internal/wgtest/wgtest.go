@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/advanced-wg/awgctrl-go/wgtypes"
+	"github.com/awg-go/awgctrl-go/wgtypes"
 )
 
 // MustCIDR converts CIDR string s into a net.IPNet or panics.

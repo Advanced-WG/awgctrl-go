@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/advanced-wg/awgctrl-go/internal/wgtest"
-	"github.com/advanced-wg/awgctrl-go/wgtypes"
+	"github.com/awg-go/awgctrl-go/internal/wgtest"
+	"github.com/awg-go/awgctrl-go/wgtypes"
 )
 
 // Example string source (with some slight modifications to use all fields):

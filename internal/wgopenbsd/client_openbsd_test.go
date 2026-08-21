@@ -12,9 +12,9 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/advanced-wg/awgctrl-go/internal/wgopenbsd/internal/wgh"
-	"github.com/advanced-wg/awgctrl-go/internal/wgtest"
-	"github.com/advanced-wg/awgctrl-go/wgtypes"
+	"github.com/awg-go/awgctrl-go/internal/wgopenbsd/internal/wgh"
+	"github.com/awg-go/awgctrl-go/internal/wgtest"
+	"github.com/awg-go/awgctrl-go/wgtypes"
 	"github.com/google/go-cmp/cmp"
 	"golang.org/x/sys/unix"
 )

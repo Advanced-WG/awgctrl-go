@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/advanced-wg/awgctrl-go/wgtypes"
+	"github.com/awg-go/awgctrl-go/wgtypes"
 	"github.com/google/go-cmp/cmp"
 	"golang.org/x/crypto/curve25519"
 )

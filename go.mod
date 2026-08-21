@@ -1,4 +1,4 @@
-module github.com/advanced-wg/awgctrl-go
+module github.com/awg-go/awgctrl-go
 
 go 1.24.0
 

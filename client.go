@@ -5,8 +5,8 @@ import (
 	"errors"
 	"os"
 
-	"github.com/advanced-wg/awgctrl-go/internal/wginternal"
-	"github.com/advanced-wg/awgctrl-go/wgtypes"
+	"github.com/awg-go/awgctrl-go/internal/wginternal"
+	"github.com/awg-go/awgctrl-go/wgtypes"
 )
 
 // Expose an identical interface to the underlying packages.

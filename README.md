@@ -1,9 +1,9 @@
 # awgctrl-go
 
-[![Linux Test](https://github.com/Advanced-WG/awgctrl-go/actions/workflows/linux-test.yml/badge.svg)](https://github.com/Advanced-WG/awgctrl-go/actions/workflows/linux-test.yml)
-[![Static Analysis](https://github.com/Advanced-WG/awgctrl-go/actions/workflows/static-analysis.yml/badge.svg)](https://github.com/Advanced-WG/awgctrl-go/actions/workflows/static-analysis.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/advanced-wg/awgctrl-go)](https://goreportcard.com/report/github.com/advanced-wg/awgctrl-go)
-[![Go Reference](https://pkg.go.dev/badge/github.com/advanced-wg/awgctrl-go.svg)](https://pkg.go.dev/github.com/advanced-wg/awgctrl-go)
+[![Linux Test](https://github.com/awg-go/awgctrl-go/actions/workflows/linux-test.yml/badge.svg)](https://github.com/awg-go/awgctrl-go/actions/workflows/linux-test.yml)
+[![Static Analysis](https://github.com/awg-go/awgctrl-go/actions/workflows/static-analysis.yml/badge.svg)](https://github.com/awg-go/awgctrl-go/actions/workflows/static-analysis.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/awg-go/awgctrl-go)](https://goreportcard.com/report/github.com/awg-go/awgctrl-go)
+[![Go Reference](https://pkg.go.dev/badge/github.com/awg-go/awgctrl-go.svg)](https://pkg.go.dev/github.com/awg-go/awgctrl-go)
 
 A Go library for controlling **WireGuard** and **AmneziaWG** devices on Linux.
 
@@ -54,7 +54,7 @@ support standard WireGuard only.
 ## Installation
 
 ```bash
-go get github.com/advanced-wg/awgctrl-go
+go get github.com/awg-go/awgctrl-go
 ```
 
 ## Quick start
@@ -120,7 +120,7 @@ client.ConfigureDevice(context.Background(), "awg0", cfg)
 - [AWG Parameter Reference](docs/AWG_PARAMETERS.md) — Jc, Jmin, Jmax, S1–S4, H1–H4, I1–I5 with limits, rules and examples
 - [Peer Advanced Security](docs/ADVANCED_SECURITY.md) — how the kernel determines per-peer AWG status
 - [Examples](docs/EXAMPLES.md) — practical usage examples
-- [pkg.go.dev](https://pkg.go.dev/github.com/advanced-wg/awgctrl-go) — full API reference
+- [pkg.go.dev](https://pkg.go.dev/github.com/awg-go/awgctrl-go) — full API reference
 
 ## License
 

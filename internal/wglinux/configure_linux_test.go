@@ -10,8 +10,8 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/advanced-wg/awgctrl-go/internal/wgtest"
-	"github.com/advanced-wg/awgctrl-go/wgtypes"
+	"github.com/awg-go/awgctrl-go/internal/wgtest"
+	"github.com/awg-go/awgctrl-go/wgtypes"
 	"github.com/mdlayher/genetlink"
 	"github.com/mdlayher/netlink"
 	"github.com/mdlayher/netlink/nlenc"

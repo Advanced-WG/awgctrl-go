@@ -5,7 +5,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/advanced-wg/awgctrl-go/wgtypes"
+	"github.com/awg-go/awgctrl-go/wgtypes"
 )
 
 // ErrReadOnly indicates that the driver backing a device is read-only. It is

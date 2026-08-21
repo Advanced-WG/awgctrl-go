@@ -13,4 +13,4 @@
 //   - Automatic parameter generation via Config.GenerateAmneziaParams()
 //   - Parameter validation via Config.Validate()
 //   - Userspace AWG daemon support (amneziawg-go)
-package wgctrl // import "github.com/advanced-wg/awgctrl-go"
+package wgctrl // import "github.com/awg-go/awgctrl-go"

@@ -9,7 +9,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/advanced-wg/awgctrl-go/wgtypes"
+	"github.com/awg-go/awgctrl-go/wgtypes"
 )
 
 // configureDevice configures a device specified by its path.
