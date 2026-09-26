@@ -37,7 +37,7 @@ daemon support.
 
 ## Requirements
 
-- Go 1.21 or later
+- Go 1.26 or later
 - Linux kernel with AmneziaWG module (`modprobe amneziawg`), or `amneziawg-go` userspace daemon
 - Root privileges or `CAP_NET_ADMIN` capability
 
