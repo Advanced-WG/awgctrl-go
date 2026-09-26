@@ -159,6 +159,11 @@ func parsePeer(ad *netlink.AttributeDecoder) wgtypes.Peer {
 		case WGPEER_A_ADVANCED_SECURITY:
 			// NLA_FLAG — presence means true, absence means false.
 			p.AdvancedSecurity = true
+		case WGPEER_A_AWG_PEER_FLAGS:
+			flags := ad.Uint32()
+			p.AWGPeerFlagsKnown = true
+			p.FixedHeaders = flags&awgPeerFFixedHeaders != 0
+			p.NoS4 = flags&awgPeerFNoS4 != 0
 		}
 	}
 

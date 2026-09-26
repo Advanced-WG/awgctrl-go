@@ -44,6 +44,14 @@ const (
 	// ADVANCED_SECURITY=11)
 	WGPEER_A_ADVANCED_SECURITY = 11
 
+	// WGPEER_A_AWG_PEER_FLAGS (NLA_U32, read-only) is sent by the patched
+	// kernel module next to WGPEER_A_ADVANCED_SECURITY: what the peer was
+	// detected to support. Bits: awgPeerFFixedHeaders, awgPeerFNoS4.
+	WGPEER_A_AWG_PEER_FLAGS = 12
+
+	awgPeerFFixedHeaders = 1 << 0
+	awgPeerFNoS4         = 1 << 1
+
 	// WGPEER_F_HAS_ADVANCED_SECURITY is always sent by the kernel in
 	// WGPEER_A_FLAGS to indicate the device supports AWG. We must send
 	// it back when configuring a peer with AdvancedSecurity=true.

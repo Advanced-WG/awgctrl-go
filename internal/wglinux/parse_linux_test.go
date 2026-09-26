@@ -754,6 +754,66 @@ func TestParsePeerAdvancedSecurity(t *testing.T) {
 	}
 }
 
+// TestParsePeerAWGFlags verifies WGPEER_A_AWG_PEER_FLAGS from the patched
+// kernel module.
+func TestParsePeerAWGFlags(t *testing.T) {
+	var testKey wgtypes.Key
+	testKey[0] = 0xcd
+
+	type flags struct{ known, fixed, noS4 bool }
+	tests := []struct {
+		name  string
+		attrs []netlink.Attribute
+		want  flags
+	}{
+		{name: "not sent (upstream module)", want: flags{}},
+		{
+			name:  "full AWG peer",
+			attrs: []netlink.Attribute{{Type: uint16(WGPEER_A_AWG_PEER_FLAGS), Data: nlenc.Uint32Bytes(0)}},
+			want:  flags{known: true},
+		},
+		{
+			name:  "AWG 1.0 peer",
+			attrs: []netlink.Attribute{{Type: uint16(WGPEER_A_AWG_PEER_FLAGS), Data: nlenc.Uint32Bytes(awgPeerFFixedHeaders)}},
+			want:  flags{known: true, fixed: true},
+		},
+		{
+			name:  "peer without S4",
+			attrs: []netlink.Attribute{{Type: uint16(WGPEER_A_AWG_PEER_FLAGS), Data: nlenc.Uint32Bytes(awgPeerFNoS4)}},
+			want:  flags{known: true, noS4: true},
+		},
+		{
+			name:  "unknown bits ignored",
+			attrs: []netlink.Attribute{{Type: uint16(WGPEER_A_AWG_PEER_FLAGS), Data: nlenc.Uint32Bytes(awgPeerFFixedHeaders | awgPeerFNoS4 | 1<<7)}},
+			want:  flags{known: true, fixed: true, noS4: true},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			attrs := append([]netlink.Attribute{
+				{Type: unix.WGPEER_A_PUBLIC_KEY, Data: testKey[:]},
+				{Type: uint16(WGPEER_A_ADVANCED_SECURITY), Data: []byte{}},
+			}, tt.attrs...)
+			msg := genetlink.Message{
+				Data: m(netlink.Attribute{
+					Type: unix.WGDEVICE_A_PEERS,
+					Data: m(netlink.Attribute{Type: 0, Data: m(attrs...)}),
+				}),
+			}
+
+			d, err := parseDeviceLoop(msg)
+			if err != nil {
+				t.Fatalf("parseDeviceLoop: %v", err)
+			}
+			p := d.Peers[0]
+			if got := (flags{p.AWGPeerFlagsKnown, p.FixedHeaders, p.NoS4}); got != tt.want {
+				t.Errorf("flags = %+v, want %+v", got, tt.want)
+			}
+		})
+	}
+}
+
 // TestParseDeviceAWGComplete tests end-to-end parsing of an AWG device
 // with obfuscation parameters and peers that have AdvancedSecurity enabled.
 func TestParseDeviceAWGComplete(t *testing.T) {

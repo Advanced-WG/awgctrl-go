@@ -254,7 +254,24 @@ type Peer struct {
 	// AdvancedSecurity indicates whether this peer uses AmneziaWG obfuscation.
 	// This is read-only — set by the kernel based on the device's advanced_security
 	// flag and whether the peer was configured with WGPEER_F_HAS_ADVANCED_SECURITY.
+	// A peer that connects with plain WireGuard framing is reported false.
 	AdvancedSecurity bool
+
+	// AWGPeerFlagsKnown reports that the kernel module detects the peer's AWG
+	// capabilities (the patched fork, on a device with obfuscation). Then
+	// AdvancedSecurity=false means a plain WireGuard peer, and FixedHeaders
+	// and NoS4 are meaningful. Like AdvancedSecurity, they reflect what the
+	// peer sent last, so they are defaults until the first handshake.
+	AWGPeerFlagsKnown bool
+
+	// FixedHeaders reports that the peer uses only the H1-H4 range starts
+	// (an AmneziaWG 1.0 client). Read-only.
+	FixedHeaders bool
+
+	// NoS4 reports that the peer sends transport packets without the S4
+	// padding (an AmneziaWG client without S3/S4). Learnt from data packets.
+	// Read-only.
+	NoS4 bool
 }
 
 // A Config is a WireGuard device configuration.
