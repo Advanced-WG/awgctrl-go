@@ -13,14 +13,16 @@ Once set, they apply to all traffic on that interface.
 Before each real WireGuard handshake, AmneziaWG sends a configurable number of
 random-size UDP packets to make the traffic pattern unrecognisable to DPI systems.
 
-| Parameter | Type | Range | Description |
-|---|---|---|---|
-| `Jc` | int | 0–10 | Number of junk packets sent before each handshake |
-| `Jmin` | int | 64–1024 | Minimum junk packet size in bytes |
-| `Jmax` | int | 64–1024 | Maximum junk packet size in bytes (must be ≥ Jmin) |
+| Parameter | Type | Kernel limit | Recommended | Description |
+|---|---|---|---|---|
+| `Jc` | int | 0–65535 | 0–10 | Number of junk packets sent before each handshake |
+| `Jmin` | int | 0–65535 | 64–1024 | Minimum junk packet size in bytes |
+| `Jmax` | int | 0–65534, ≥ Jmin | 64–1024 | Maximum junk packet size in bytes |
 
 **Notes:**
-- Setting `Jc = 0` disables junk packets entirely
+- Setting `Jc = 0` disables junk packets entirely in the kernel; the
+  `amneziawg-go` userspace daemon rejects `Jc`, `Jmin` and `Jmax` of 0
+- Keep `Jmax` below the path MTU (1280 is safe everywhere), or junk packets get fragmented
 - If `Jmin == Jmax`, the kernel increments `Jmax` by 1 automatically
 - Larger values provide stronger obfuscation but increase handshake overhead
 - `GenerateAmneziaParams()` generates Jc in the range 3–6 and packet sizes that resemble UDP application traffic
@@ -32,12 +34,15 @@ random-size UDP packets to make the traffic pattern unrecognisable to DPI system
 Random padding bytes are prepended to each WireGuard control packet type.
 This changes the packet sizes so they no longer match the known WireGuard signature.
 
-| Parameter | Type | Range | Applies to packet | Base WireGuard size |
-|---|---|---|---|---|
-| `S1` | int | 0–64 | Handshake Initiation | 148 bytes |
-| `S2` | int | 0–64 | Handshake Response | 92 bytes |
-| `S3` | int | 0–64 | Cookie Reply | 64 bytes |
-| `S4` | int | 0–32 | Transport Data | variable |
+| Parameter | Type | Kernel limit | Recommended | Applies to packet | Base WireGuard size |
+|---|---|---|---|---|---|
+| `S1` | int | 0–65387 | 0–64 | Handshake Initiation | 148 bytes |
+| `S2` | int | 0–65443 | 0–64 | Handshake Response | 92 bytes |
+| `S3` | int | 0–65471 | 0–64 | Cookie Reply | 64 bytes |
+| `S4` | int | 0–65503 | 0–32 | Transport Data | variable |
+
+The kernel limit is 65535 minus the base message size. For S1–S3, staying under
+the path MTU (for S1: 1280 − 148 = 1132) avoids fragmentation.
 
 **Notes:**
 - All four values should be **unique** to prevent correlation attacks
@@ -46,7 +51,7 @@ This changes the packet sizes so they no longer match the known WireGuard signat
   - `S3+64 ≠ S1+148`
   - `S3+64 ≠ S2+92`
 - `GenerateAmneziaParams()` enforces both rules automatically
-- `S4` has a smaller range (0–32) to preserve MTU headroom for data packets
+- `S4` is added to every data packet, so it directly reduces the usable MTU; keep it small
 
 ---
 
@@ -108,9 +113,9 @@ Each field is a string composed of one or more tags that describe packet segment
 | `<r N>` | `<r 20>` | N random bytes |
 | `<b 0xHEX>` | `<b 0xdeadbeef>` | Literal bytes in hex |
 | `<c>` | `<c>` | 4-byte packet counter (big-endian uint32) |
-| `<t VAL>` | `<t 1>` | Timestamp-based field |
-| `<rc VAL>` | `<rc 4>` | Count-based random bytes |
-| `<rd VAL>` | `<rd 8>` | Deterministic random bytes |
+| `<t>` | `<t>` | 4-byte Unix time in seconds (big-endian uint32) |
+| `<rc N>` | `<rc 4>` | N random letters (a–z, A–Z) |
+| `<rd N>` | `<rd 8>` | N random decimal digits |
 
 Tags can be combined: `"<r 10><b 0xff><c>"`
 
@@ -135,12 +140,21 @@ if err := cfg.Validate(); err != nil {
 }
 ```
 
-`Validate()` checks:
-- `Jc` is in range 0–10
-- `Jmin` and `Jmax` are in range 64–1024
-- `Jmin ≤ Jmax`
-- `S1–S3` are in range 0–64
-- `S4` is in range 0–32
+`Validate()` rejects exactly what the kernel module rejects, so errors show up
+before the netlink call instead of as a bare `EINVAL`. It does not enforce the
+recommended ranges above; that is a policy decision for the application.
+
+It checks:
+- `Jc`, `Jmin`, `Jmax` are 16-bit; `Jmax < 65535`; `Jmin ≤ Jmax` when both are set
+  (`Jmax = 0` turns junk packets off); `Jmin = Jmax = 65534` with junk packets on is
+  rejected because the kernel then uses `Jmax + 1`
+- `S1–S4` plus their base message size fit in 65535 bytes
+- `H1–H4` are `N` or `N-M` (32-bit, `N ≤ M`) and do not overlap each other
+- `I1–I5` only use known tags with valid arguments and describe at most 65535 bytes
+
+Only the fields that are set are checked, so a partial update is validated on its
+own. `wgtypes.ParseMagicHeader` and `wgtypes.InitPacketSize` expose the H and I
+parsers for applications that need them.
 
 ---
 

@@ -70,20 +70,20 @@ type Device struct {
 	// AmneziaWG obfuscation parameters — only populated when IsAmnezia is true.
 	// These are read from the kernel via netlink on Device() calls.
 
-	// Jc is the number of junk packets sent before each real handshake (0-10).
+	// Jc is the number of junk packets sent before each real handshake.
 	Jc int
-	// Jmin is the minimum junk packet size in bytes (64-1024).
+	// Jmin is the minimum junk packet size in bytes.
 	Jmin int
-	// Jmax is the maximum junk packet size in bytes (64-1024, >= Jmin).
+	// Jmax is the maximum junk packet size in bytes (>= Jmin).
 	Jmax int
 
-	// S1 is the number of padding bytes prepended to the Initiation packet (0-64).
+	// S1 is the number of padding bytes prepended to the Initiation packet.
 	S1 int
-	// S2 is the number of padding bytes prepended to the Response packet (0-64).
+	// S2 is the number of padding bytes prepended to the Response packet.
 	S2 int
-	// S3 is the number of padding bytes prepended to the Cookie packet (0-64).
+	// S3 is the number of padding bytes prepended to the Cookie packet.
 	S3 int
-	// S4 is the number of padding bytes prepended to the Transport packet (0-32).
+	// S4 is the number of padding bytes prepended to the Transport packet.
 	S4 int
 
 	// H1-H4 are the magic header values (or ranges "min-max") for each packet type.
@@ -100,9 +100,9 @@ type Device struct {
 	//   <r N>       — N random bytes
 	//   <b 0xHEX>   — literal bytes in hex (e.g. "<b 0xdeadbeef>")
 	//   <c>         — 4-byte packet counter (big-endian uint32)
-	//   <t VAL>     — timestamp-based field
-	//   <rc VAL>    — random bytes, count-based
-	//   <rd VAL>    — random bytes, deterministic
+	//   <t>         — 4-byte Unix time in seconds (big-endian uint32)
+	//   <rc N>      — N random letters (a-z, A-Z)
+	//   <rd N>      — N random decimal digits
 	//
 	// Multiple tags can be combined: "<r 10><b 0xff><c>"
 	// GenerateAmneziaParams() uses "<r N>" for simplicity.
@@ -319,7 +319,7 @@ type Config struct {
 func (cfg *Config) GenerateAmneziaParams() {
 	// ==========================================
 	// 1. PRE-SESSION JUNK PACKETS (Jc, Jmin, Jmax)
-	// Doc limits: Jc 0-10, Jmin/Jmax 64-1024 bytes.
+	// Recommended: Jc 0-10, Jmin/Jmax 64-1024 bytes (Validate has the kernel limits).
 	// We avoid packets smaller than 64 bytes so DPI doesn't flag them as anomalies.
 	// ==========================================
 
@@ -331,7 +331,7 @@ func (cfg *Config) GenerateAmneziaParams() {
 
 	// ==========================================
 	// 2. PACKET PADDING (S1, S2, S3, S4)
-	// Doc limits: S1-S3: 0-64 bytes. S4: 0-32 bytes.
+	// Recommended: S1-S3: 0-64 bytes. S4: 0-32 bytes.
 	// Base standard WG sizes: Init=148, Resp=92, Cookie=64.
 	// Random garbage bytes prepended to the START of WireGuard packets.
 	// ==========================================
@@ -416,43 +416,6 @@ func intPtr(i int) *int {
 
 func strPtr(s string) *string {
 	return &s
-}
-
-// Validate checks that the AmneziaWG-specific fields in Config are within
-// the documented kernel limits. Returns a non-nil error describing the first
-// violation found.
-func (cfg *Config) Validate() error {
-	if cfg.Jc != nil {
-		if *cfg.Jc < 0 || *cfg.Jc > 10 {
-			return fmt.Errorf("wgtypes: Jc must be 0-10, got %d", *cfg.Jc)
-		}
-	}
-	if cfg.Jmin != nil {
-		if *cfg.Jmin < 64 || *cfg.Jmin > 1024 {
-			return fmt.Errorf("wgtypes: Jmin must be 64-1024, got %d", *cfg.Jmin)
-		}
-	}
-	if cfg.Jmax != nil {
-		if *cfg.Jmax < 64 || *cfg.Jmax > 1024 {
-			return fmt.Errorf("wgtypes: Jmax must be 64-1024, got %d", *cfg.Jmax)
-		}
-	}
-	if cfg.Jmin != nil && cfg.Jmax != nil && *cfg.Jmin > *cfg.Jmax {
-		return fmt.Errorf("wgtypes: Jmin (%d) must be <= Jmax (%d)", *cfg.Jmin, *cfg.Jmax)
-	}
-	if cfg.S1 != nil && (*cfg.S1 < 0 || *cfg.S1 > 64) {
-		return fmt.Errorf("wgtypes: S1 must be 0-64, got %d", *cfg.S1)
-	}
-	if cfg.S2 != nil && (*cfg.S2 < 0 || *cfg.S2 > 64) {
-		return fmt.Errorf("wgtypes: S2 must be 0-64, got %d", *cfg.S2)
-	}
-	if cfg.S3 != nil && (*cfg.S3 < 0 || *cfg.S3 > 64) {
-		return fmt.Errorf("wgtypes: S3 must be 0-64, got %d", *cfg.S3)
-	}
-	if cfg.S4 != nil && (*cfg.S4 < 0 || *cfg.S4 > 32) {
-		return fmt.Errorf("wgtypes: S4 must be 0-32, got %d", *cfg.S4)
-	}
-	return nil
 }
 
 // TODO(mdlayher): consider adding ProtocolVersion in PeerConfig.
