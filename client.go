@@ -103,7 +103,15 @@ func (c *Client) Device(ctx context.Context, name string) (*wgtypes.Device, erro
 //
 // If the device specified by name does not exist or is not a WireGuard device,
 // an error is returned which can be checked using `errors.Is(err, os.ErrNotExist)`.
+//
+// The AmneziaWG fields are checked with cfg.Validate first: the netlink
+// encoding is 16-bit, so e.g. Jc 70000 would otherwise reach the kernel as
+// 4464 without an error.
 func (c *Client) ConfigureDevice(ctx context.Context, name string, cfg wgtypes.Config) error {
+	if err := cfg.Validate(); err != nil {
+		return err
+	}
+
 	for _, wgc := range c.cs {
 		err := wgc.ConfigureDevice(ctx, name, cfg)
 		switch {

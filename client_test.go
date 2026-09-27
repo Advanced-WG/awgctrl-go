@@ -254,3 +254,23 @@ func (c *testClient) Device(ctx context.Context, name string) (*wgtypes.Device, 
 func (c *testClient) ConfigureDevice(ctx context.Context, name string, cfg wgtypes.Config) error {
 	return c.ConfigureDeviceFunc(ctx, name, cfg)
 }
+
+// Out-of-range AmneziaWG values are refused before any backend is asked:
+// netlink would send Jc 70000 as 4464.
+func TestClientConfigureDeviceValidates(t *testing.T) {
+	called := false
+	c := &Client{cs: []wginternal.Client{&testClient{
+		ConfigureDeviceFunc: func(_ context.Context, _ string, _ wgtypes.Config) error {
+			called = true
+			return nil
+		},
+	}}}
+
+	jc := 70000
+	if err := c.ConfigureDevice(ctx, "awg0", wgtypes.Config{Jc: &jc}); err == nil {
+		t.Fatal("Jc 70000 accepted")
+	}
+	if called {
+		t.Fatal("backend called with an invalid configuration")
+	}
+}
