@@ -45,8 +45,11 @@ This library works with **any AmneziaWG v2 kernel module**, including the
 [upstream module](https://github.com/amnezia-vpn/amneziawg-linux-kernel-module).
 For production use we recommend the
 [patched fork](https://github.com/Advanced-WG/amneziawg-linux-kernel-module-awg)
-which fixes netlink dump overflow with many peers, a cookie reply size bug,
-sysfs race conditions, and adds DKMS/kernel 6.19+ compatibility.
+which validates AWG parameters before applying them (upstream can crash on
+a rejected configuration), serves plain WireGuard, AWG 1.0 and AWG 2.0
+clients on one interface, fixes netlink dumps with many peers and builds on
+Linux up to 7.2 and RHEL 10. Only this module reports the detected peer type
+(`Peer.AWGPeerFlagsKnown`, `FixedHeaders`, `NoS4`).
 
 AWG kernel and userspace support is Linux-only. Other platforms (FreeBSD, OpenBSD, Windows)
 support standard WireGuard only.
