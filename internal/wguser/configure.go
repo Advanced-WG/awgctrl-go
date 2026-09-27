@@ -20,6 +20,12 @@ func (c *Client) configureDevice(ctx context.Context, device string, cfg wgtypes
 	}
 	defer conn.Close()
 
+	// After dial: a device that is not ours still reports "not exist", so
+	// the caller goes on to the next backend.
+	if err := checkLineValues(cfg); err != nil {
+		return err
+	}
+
 	// If the context carries a deadline, propagate it to the connection
 	// so that blocked reads/writes are cancelled.
 	if deadline, ok := ctx.Deadline(); ok {
@@ -55,6 +61,26 @@ func (c *Client) configureDevice(ctx context.Context, device string, cfg wgtypes
 		return os.NewSyscallError("read", fmt.Errorf("wguser: %s", str))
 	}
 
+	return nil
+}
+
+// checkLineValues rejects string values that contain a line break. The
+// protocol is one "key=value" per line and an empty line ends the request,
+// so "h1=5\n" (which the kernel's parser accepts) would cut the request
+// short and a newline in I1 would add a key of its own.
+func checkLineValues(cfg wgtypes.Config) error {
+	fields := []struct {
+		name string
+		v    *string
+	}{
+		{"H1", cfg.H1}, {"H2", cfg.H2}, {"H3", cfg.H3}, {"H4", cfg.H4},
+		{"I1", cfg.I1}, {"I2", cfg.I2}, {"I3", cfg.I3}, {"I4", cfg.I4}, {"I5", cfg.I5},
+	}
+	for _, f := range fields {
+		if f.v != nil && strings.ContainsAny(*f.v, "\r\n") {
+			return fmt.Errorf("wguser: %s must not contain a line break", f.name)
+		}
+	}
 	return nil
 }
 

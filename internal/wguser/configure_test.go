@@ -159,3 +159,21 @@ func TestClientConfigureDeviceOK(t *testing.T) {
 		})
 	}
 }
+
+// A line break would end the UAPI request early ("h1=5\n" passes Validate,
+// since the kernel accepts it) or add a key of its own.
+func TestCheckLineValues(t *testing.T) {
+	str := func(s string) *string { return &s }
+	for _, cfg := range []wgtypes.Config{
+		{H1: str("5\n")},
+		{H4: str("5\r")},
+		{I1: str("<r 5>\nlisten_port=1")},
+	} {
+		if err := checkLineValues(cfg); err == nil {
+			t.Errorf("accepted %+v", cfg)
+		}
+	}
+	if err := checkLineValues(wgtypes.Config{H1: str("100-200"), I1: str("<b 0xc0ff><r 32>")}); err != nil {
+		t.Errorf("valid values rejected: %v", err)
+	}
+}
