@@ -120,6 +120,7 @@ func (dp *deviceParser) Parse(key, value string) {
 		// key indicated here.
 		dp.parsePeers = true
 		dp.peers++
+		dp.hsSec, dp.hsNano = 0, 0
 
 		dp.d.Peers = append(dp.d.Peers, wgtypes.Peer{
 			PublicKey: dp.parseKey(value),
@@ -183,6 +184,18 @@ func (dp *deviceParser) curPeer() *wgtypes.Peer {
 	return &dp.d.Peers[dp.peers-1]
 }
 
+// setHandshakeTime sets the peer's last handshake from the seconds and
+// nanoseconds seen so far, in whichever order they arrive. Both 0 means no
+// handshake yet (zero time.Time); a whole second (nanoseconds 0) is a valid
+// time.
+func (dp *deviceParser) setHandshakeTime(p *wgtypes.Peer) {
+	if dp.hsSec == 0 && dp.hsNano == 0 {
+		p.LastHandshakeTime = time.Time{}
+		return
+	}
+	p.LastHandshakeTime = time.Unix(int64(dp.hsSec), int64(dp.hsNano))
+}
+
 // peerParse parses a key/value field into the current Peer.
 func (dp *deviceParser) peerParse(key, value string) {
 	p := dp.curPeer()
@@ -193,16 +206,10 @@ func (dp *deviceParser) peerParse(key, value string) {
 		p.Endpoint = dp.parseAddr(value)
 	case "last_handshake_time_sec":
 		dp.hsSec = dp.parseInt(value)
+		dp.setHandshakeTime(p)
 	case "last_handshake_time_nsec":
 		dp.hsNano = dp.parseInt(value)
-
-		// Assume that we've seen both seconds and nanoseconds and populate this
-		// field now. However, if both fields were set to 0, assume we have never
-		// had a successful handshake with this peer, and return a zero-value
-		// time.Time to our callers.
-		if dp.hsSec > 0 && dp.hsNano > 0 {
-			p.LastHandshakeTime = time.Unix(int64(dp.hsSec), int64(dp.hsNano))
-		}
+		dp.setHandshakeTime(p)
 	case "tx_bytes":
 		p.TransmitBytes = dp.parseInt64(value)
 	case "rx_bytes":

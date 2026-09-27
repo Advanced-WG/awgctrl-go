@@ -175,3 +175,32 @@ func TestClientDevices(t *testing.T) {
 		})
 	}
 }
+
+func TestParseLastHandshakeTime(t *testing.T) {
+	const (
+		keyA = "b85996fecc9c7f1fc6d2572a76eda11d59bcd20be8e543b15ce4bd85a8e75a33"
+		keyB = "58402e695ba1772b1cc9309755f043251ea77fdcf10fbe63989ceb7e19321376"
+		keyC = "662e14fd594556f522604703340351258903b64f35553763f19426ab2a515c58"
+	)
+	var dp deviceParser
+	for _, kv := range [][2]string{
+		// A whole second: nanoseconds 0 is a valid handshake time.
+		{"public_key", keyA}, {"last_handshake_time_sec", "1700000000"}, {"last_handshake_time_nsec", "0"},
+		// No handshake yet; A's values must not carry over.
+		{"public_key", keyB}, {"last_handshake_time_nsec", "0"}, {"last_handshake_time_sec", "0"},
+		// Nanoseconds before seconds.
+		{"public_key", keyC}, {"last_handshake_time_nsec", "5"}, {"last_handshake_time_sec", "1700000001"},
+	} {
+		dp.Parse(kv[0], kv[1])
+	}
+	d, err := dp.Device()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []time.Time{time.Unix(1700000000, 0), {}, time.Unix(1700000001, 5)}
+	for i, p := range d.Peers {
+		if !p.LastHandshakeTime.Equal(want[i]) {
+			t.Errorf("peer %d: LastHandshakeTime = %v, want %v", i, p.LastHandshakeTime, want[i])
+		}
+	}
+}
