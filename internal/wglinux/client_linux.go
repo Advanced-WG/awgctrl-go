@@ -36,6 +36,10 @@ type Client struct {
 	amneziaFamily *genetlink.Family
 
 	interfaces func() ([]string, error)
+
+	// linkKind returns the rtnetlink kind of a link ("wireguard",
+	// "amneziawg", ...), or os.ErrNotExist.
+	linkKind func(name string) (string, error)
 }
 
 // New creates a new Client and returns whether or not the generic netlink
@@ -92,6 +96,7 @@ func initClient(c *genetlink.Conn) (*Client, bool, error) {
 		wgFamily:      wgPtr,
 		amneziaFamily: amnezia,
 		interfaces:    rtnlInterfaces,
+		linkKind:      rtnlLinkKind,
 	}, true, nil
 }
 
@@ -139,13 +144,11 @@ func (c *Client) Device(ctx context.Context, name string) (*wgtypes.Device, erro
 		return nil, os.ErrNotExist
 	}
 
-	// getDeviceFamily already fetches the device — reuse that result
-	// to avoid a second netlink round-trip.
-	_, d, err := c.getDeviceFamily(name)
+	family, err := c.familyFor(name)
 	if err != nil {
 		return nil, err
 	}
-	return d, nil
+	return c.getDeviceInternal(name, *family)
 }
 
 // ConfigureDevice implements wginternal.Client.
@@ -154,7 +157,7 @@ func (c *Client) ConfigureDevice(ctx context.Context, name string, cfg wgtypes.C
 		return err
 	}
 
-	family, _, err := c.getDeviceFamily(name)
+	family, err := c.familyFor(name)
 	if err != nil {
 		return err
 	}
@@ -183,33 +186,24 @@ func (c *Client) ConfigureDevice(ctx context.Context, name string, cfg wgtypes.C
 	return nil
 }
 
-// getDeviceFamily determines if a device belongs to standard WireGuard or AmneziaWG,
-// and returns both the matched family and the already-fetched Device to avoid
-// a second netlink round-trip in the caller.
-func (c *Client) getDeviceFamily(name string) (*genetlink.Family, *wgtypes.Device, error) {
-	// 1. Try Standard WireGuard if loaded.
-	if c.wgFamily != nil {
-		d, err := c.getDeviceInternal(name, *c.wgFamily)
-		if err == nil {
-			return c.wgFamily, d, nil
-		}
-		if !errors.Is(err, os.ErrNotExist) && !errors.Is(err, syscall.EOPNOTSUPP) {
-			return nil, nil, err
-		}
+// familyFor returns the generic netlink family that serves the named device,
+// chosen by its link kind. This costs one small rtnetlink request; fetching
+// the device instead would dump it with all its peers before every change.
+func (c *Client) familyFor(name string) (*genetlink.Family, error) {
+	kind, err := c.linkKind(name)
+	if err != nil {
+		return nil, err
 	}
 
-	// 2. Try AmneziaWG if loaded.
-	if c.amneziaFamily != nil {
-		d, err := c.getDeviceInternal(name, *c.amneziaFamily)
-		if err == nil {
-			return c.amneziaFamily, d, nil
-		}
-		if !errors.Is(err, os.ErrNotExist) && !errors.Is(err, syscall.EOPNOTSUPP) {
-			return nil, nil, err
-		}
+	switch {
+	case kind == wgKind && c.wgFamily != nil:
+		return c.wgFamily, nil
+	case kind == amneziaKind && c.amneziaFamily != nil:
+		return c.amneziaFamily, nil
 	}
 
-	return nil, nil, os.ErrNotExist
+	// Not a kernel WireGuard/AmneziaWG link (e.g. a userspace tun device).
+	return nil, os.ErrNotExist
 }
 
 // getDeviceInternal executes the netlink call to fetch device details for a specific family.
@@ -283,6 +277,88 @@ func rtnlInterfaces() ([]string, error) {
 	}
 
 	return parseRTNLInterfaces(msgs)
+}
+
+// rtnlLinkKind returns the IFLA_INFO_KIND of the named link using a single
+// RTM_GETLINK request for that name (no dump of all links).
+func rtnlLinkKind(name string) (string, error) {
+	if name == "" || len(name) >= unix.IFNAMSIZ {
+		return "", os.ErrNotExist
+	}
+
+	conn, err := netlink.Dial(unix.NETLINK_ROUTE, nil)
+	if err != nil {
+		return "", fmt.Errorf("wglinux: failed to dial rtnetlink: %w", err)
+	}
+	defer conn.Close()
+
+	ae := netlink.NewAttributeEncoder()
+	ae.String(unix.IFLA_IFNAME, name)
+	attrs, err := ae.Encode()
+	if err != nil {
+		return "", err
+	}
+
+	msgs, err := conn.Execute(netlink.Message{
+		Header: netlink.Header{
+			Type:  unix.RTM_GETLINK,
+			Flags: netlink.Request,
+		},
+		// struct ifinfomsg (all zero: any family, look up by name) + attributes
+		Data: append(make([]byte, unix.SizeofIfInfomsg), attrs...),
+	})
+	if err != nil {
+		var oerr *netlink.OpError
+		if errors.As(err, &oerr) && errors.Is(oerr.Err, unix.ENODEV) {
+			return "", os.ErrNotExist
+		}
+		return "", fmt.Errorf("wglinux: failed to look up link %q: %w", name, err)
+	}
+
+	for _, m := range msgs {
+		if m.Header.Type != unix.RTM_NEWLINK {
+			continue
+		}
+		return parseLinkKind(m.Data)
+	}
+	return "", os.ErrNotExist
+}
+
+// parseLinkKind returns the IFLA_INFO_KIND of an RTM_NEWLINK payload
+// (ifinfomsg followed by attributes); "" if the link has none.
+func parseLinkKind(b []byte) (string, error) {
+	if len(b) < unix.SizeofIfInfomsg {
+		return "", fmt.Errorf("wglinux: rtnetlink message is too short for ifinfomsg: %d", len(b))
+	}
+
+	ad, err := netlink.NewAttributeDecoder(b[unix.SizeofIfInfomsg:])
+	if err != nil {
+		return "", err
+	}
+
+	var kind string
+	for ad.Next() {
+		if ad.Type() == unix.IFLA_LINKINFO {
+			ad.Do(linkInfoKind(&kind))
+		}
+	}
+	return kind, ad.Err()
+}
+
+// linkInfoKind reads IFLA_INFO_KIND from nested IFLA_LINKINFO attributes.
+func linkInfoKind(kind *string) func(b []byte) error {
+	return func(b []byte) error {
+		ad, err := netlink.NewAttributeDecoder(b)
+		if err != nil {
+			return err
+		}
+		for ad.Next() {
+			if ad.Type() == unix.IFLA_INFO_KIND {
+				*kind = ad.String()
+			}
+		}
+		return ad.Err()
+	}
 }
 
 // parseRTNLInterfaces unpacks rtnetlink messages and returns WireGuard

@@ -367,6 +367,7 @@ func testClient(t *testing.T, fn genltest.Func) *Client {
 	c.interfaces = func() ([]string, error) {
 		return []string{okName}, nil
 	}
+	c.linkKind = func(string) (string, error) { return wgKind, nil }
 
 	return c
 }
@@ -407,9 +408,8 @@ func mustAllowedIPs(ipns []net.IPNet) []byte {
 
 func m(attrs ...netlink.Attribute) []byte { return nltest.MustMarshalAttributes(attrs) }
 
-// configureHandler wraps a SET_DEVICE test handler so that the preceding
-// GET_DEVICE request from getDeviceFamily() is handled automatically.
-// The GET returns a minimal device response; the SET is delegated to fn.
+// configureHandler wraps a SET_DEVICE test handler and also answers a
+// GET_DEVICE with a minimal device (ConfigureDevice no longer sends one).
 func configureHandler(fn genltest.Func) genltest.Func {
 	return func(greq genetlink.Message, nreq netlink.Message) ([]genetlink.Message, error) {
 		if greq.Header.Command == unix.WG_CMD_GET_DEVICE {
@@ -431,4 +431,63 @@ func intPtr(v int) *int                     { return &v }
 
 func panicf(format string, a ...interface{}) {
 	panic(fmt.Sprintf(format, a...))
+}
+
+func Test_parseLinkKind(t *testing.T) {
+	msg := func(attrs ...netlink.Attribute) []byte {
+		return append(make([]byte, syscall.SizeofIfInfomsg), nltest.MustMarshalAttributes(attrs)...)
+	}
+	kind := func(k string) netlink.Attribute {
+		return netlink.Attribute{Type: unix.IFLA_LINKINFO, Data: m(netlink.Attribute{Type: unix.IFLA_INFO_KIND, Data: nlenc.Bytes(k)})}
+	}
+	name := netlink.Attribute{Type: unix.IFLA_IFNAME, Data: nlenc.Bytes("awg0")}
+
+	for _, tt := range []struct {
+		data []byte
+		want string
+	}{
+		{msg(name, kind(amneziaKind)), amneziaKind},
+		{msg(name, kind(wgKind)), wgKind},
+		{msg(name), ""}, // e.g. a physical NIC
+	} {
+		got, err := parseLinkKind(tt.data)
+		if err != nil || got != tt.want {
+			t.Errorf("parseLinkKind = %q, %v; want %q", got, err, tt.want)
+		}
+	}
+	if _, err := parseLinkKind([]byte{1, 2}); err == nil {
+		t.Error("short message accepted")
+	}
+}
+
+// ConfigureDevice picks the family from the link kind and sends only the
+// SET: no GET_DEVICE (a dump of every peer) before each change.
+func TestClientConfigureDeviceNoDump(t *testing.T) {
+	var cmds []uint8
+	c := testClient(t, func(greq genetlink.Message, nreq netlink.Message) ([]genetlink.Message, error) {
+		if nreq.Header.Type == familyID { // not genltest's own empty messages
+			cmds = append(cmds, greq.Header.Command)
+		}
+		return nil, nil
+	})
+	defer c.Close()
+
+	if err := c.ConfigureDevice(context.Background(), okName, wgtypes.Config{}); err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff([]uint8{unix.WG_CMD_SET_DEVICE}, cmds); diff != "" {
+		t.Fatalf("unexpected commands (-want +got):\n%s", diff)
+	}
+
+	// Userspace (tun) or missing links belong to another backend.
+	for _, kind := range []string{"tun", ""} {
+		c.linkKind = func(string) (string, error) { return kind, nil }
+		if err := c.ConfigureDevice(context.Background(), okName, wgtypes.Config{}); !errors.Is(err, os.ErrNotExist) {
+			t.Errorf("kind %q: %v, want not exist", kind, err)
+		}
+	}
+	c.linkKind = func(string) (string, error) { return "", os.ErrNotExist }
+	if _, err := c.Device(context.Background(), "nope0"); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("missing link: %v, want not exist", err)
+	}
 }
