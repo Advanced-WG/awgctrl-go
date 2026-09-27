@@ -177,20 +177,19 @@ func testConfigure(t *testing.T, c *wgctrl.Client, d *wgtypes.Device) {
 	}
 
 	// Now that a new configuration has been applied, update our initial
-	// device for comparison.
-	*d = wgtypes.Device{
-		Name:       d.Name,
-		Type:       d.Type,
-		PrivateKey: priv,
-		PublicKey:  priv.PublicKey(),
-		ListenPort: port,
-		Peers: []wgtypes.Peer{{
-			PublicKey:         peerKey,
-			LastHandshakeTime: time.Time{},
-			AllowedIPs:        ips,
-			ProtocolVersion:   1,
-		}},
-	}
+	// device for comparison. Fields the configuration did not touch (e.g.
+	// IsAmnezia and the AmneziaWG parameters) keep their values.
+	want := *d
+	want.PrivateKey = priv
+	want.PublicKey = priv.PublicKey()
+	want.ListenPort = port
+	want.Peers = []wgtypes.Peer{{
+		PublicKey:         peerKey,
+		LastHandshakeTime: time.Time{},
+		AllowedIPs:        ips,
+		ProtocolVersion:   1,
+	}}
+	*d = want
 
 	// Sort AllowedIPs as different implementations might return
 	// them in different order
