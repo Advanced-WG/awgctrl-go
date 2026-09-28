@@ -17,13 +17,18 @@ jobs:
 
     steps:
     - name: Check out code into the Go module directory
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Set up Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@v6
       with:
         go-version: ${{ matrix.go-version }}
       id: go
+
+    # An existing device for TestLinuxClientIsPermission: reading it without
+    # CAP_NET_ADMIN must fail with permission denied (tests run unprivileged).
+    - name: Create a WireGuard device
+      run: sudo ip link add wgperm0 type wireguard
 
     - name: Run tests
       run: go test -race ./...

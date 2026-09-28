@@ -147,9 +147,22 @@ func TestLinuxClientIsPermission(t *testing.T) {
 
 	defer c.Close()
 
-	// Check for permission denied as unprivileged user.
-	if _, err := c.Device(context.Background(), "wgnotexist0"); !os.IsPermission(err) {
-		t.Fatalf("expected permission denied, but got: %v", err)
+	// Looking up the link kind needs no privileges, so a missing device is
+	// reported as missing rather than as a permission problem.
+	if _, err := c.Device(context.Background(), "wgnotexist0"); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("expected not exist for a missing device, but got: %v", err)
+	}
+
+	// Reading an existing device needs CAP_NET_ADMIN.
+	ifis, err := rtnlInterfaces()
+	if err != nil {
+		t.Fatalf("failed to list interfaces: %v", err)
+	}
+	if len(ifis) == 0 {
+		t.Skip("skipping, no WireGuard device to check permissions on (create one as root)")
+	}
+	if _, err := c.Device(context.Background(), ifis[0]); !os.IsPermission(err) {
+		t.Fatalf("expected permission denied for %q, but got: %v", ifis[0], err)
 	}
 }
 
