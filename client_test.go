@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/advanced-wg/awgctrl-go/internal/wginternal"
@@ -272,5 +273,73 @@ func TestClientConfigureDeviceValidates(t *testing.T) {
 	}
 	if called {
 		t.Fatal("backend called with an invalid configuration")
+	}
+}
+
+// A partial Jc/Jmin/Jmax or H1-H4 update is checked together with the
+// device's current values, as the kernel does, so the conflict gets a clear
+// error instead of EINVAL.
+func TestClientConfigureDeviceValidatesAgainstDevice(t *testing.T) {
+	dev := &wgtypes.Device{
+		Name: "awg0", IsAmnezia: true,
+		Jc: 4, Jmin: 40, Jmax: 100,
+		H1: "100-199", H2: "200-300", H3: "400", H4: "500",
+	}
+	intp := func(v int) *int { return &v }
+	strp := func(v string) *string { return &v }
+
+	tests := []struct {
+		name    string
+		cfg     wgtypes.Config
+		dev     *wgtypes.Device
+		devErr  error
+		reads   int
+		wantErr string
+	}{
+		{name: "Jmin above current Jmax", cfg: wgtypes.Config{Jmin: intp(500)}, dev: dev, reads: 1, wantErr: "Jmin (500) must be <= Jmax (100)"},
+		{name: "Jmax below current Jmin", cfg: wgtypes.Config{Jmax: intp(20)}, dev: dev, reads: 1, wantErr: "Jmin (40) must be <= Jmax (20)"},
+		{name: "Jmin within current Jmax", cfg: wgtypes.Config{Jmin: intp(90)}, dev: dev, reads: 1},
+		{name: "H1 overlaps current H2", cfg: wgtypes.Config{H1: strp("250-260")}, dev: dev, reads: 1, wantErr: "H1 (250-260) and H2 (200-300) overlap"},
+		{name: "H1 free of current headers", cfg: wgtypes.Config{H1: strp("600-700")}, dev: dev, reads: 1},
+		{name: "full sets are not read", cfg: wgtypes.Config{
+			Jc: intp(4), Jmin: intp(40), Jmax: intp(100),
+			H1: strp("1"), H2: strp("2"), H3: strp("3"), H4: strp("4"),
+		}, dev: dev},
+		{name: "no AWG fields are not read", cfg: wgtypes.Config{ListenPort: intp(51820)}, dev: dev},
+		{name: "plain WireGuard device", cfg: wgtypes.Config{Jmin: intp(500)}, dev: &wgtypes.Device{Name: "wg0"}, reads: 1},
+		{name: "unreadable device is left to the backend", cfg: wgtypes.Config{Jmin: intp(500)}, devErr: errFoo, reads: 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reads, configured := 0, false
+			c := &Client{cs: []wginternal.Client{&testClient{
+				DeviceFunc: func(_ context.Context, _ string) (*wgtypes.Device, error) {
+					reads++
+					return tt.dev, tt.devErr
+				},
+				ConfigureDeviceFunc: func(_ context.Context, _ string, _ wgtypes.Config) error {
+					configured = true
+					return nil
+				},
+			}}}
+
+			err := c.ConfigureDevice(ctx, "awg0", tt.cfg)
+			if reads != tt.reads {
+				t.Fatalf("device read %d times, want %d", reads, tt.reads)
+			}
+			if tt.wantErr == "" {
+				if err != nil || !configured {
+					t.Fatalf("ConfigureDevice = %v, configured %v; want applied", err, configured)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("ConfigureDevice = %v, want error containing %q", err, tt.wantErr)
+			}
+			if configured {
+				t.Fatal("backend called with a conflicting configuration")
+			}
+		})
 	}
 }

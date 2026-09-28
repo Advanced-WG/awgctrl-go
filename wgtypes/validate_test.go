@@ -53,8 +53,8 @@ func TestConfigValidate(t *testing.T) {
 		{name: "H open range", cfg: wgtypes.Config{H4: strPtr("5-")}, wantErr: "H4: invalid magic header"},
 		{name: "H above u32", cfg: wgtypes.Config{H1: strPtr("4294967296")}, wantErr: "H1: invalid magic header"},
 		{name: "H negative", cfg: wgtypes.Config{H1: strPtr("-5")}, wantErr: "H1: invalid magic header"},
-		{name: "H overlap", cfg: wgtypes.Config{H1: strPtr("100-200"), H3: strPtr("150-250")}, wantErr: "H3 (150-250) overlaps H1"},
-		{name: "H touching ranges overlap", cfg: wgtypes.Config{H1: strPtr("100-200"), H2: strPtr("200")}, wantErr: "overlaps H1"},
+		{name: "H overlap", cfg: wgtypes.Config{H1: strPtr("100-200"), H3: strPtr("150-250")}, wantErr: "H1 (100-200) and H3 (150-250) overlap"},
+		{name: "H touching ranges overlap", cfg: wgtypes.Config{H1: strPtr("100-200"), H2: strPtr("200")}, wantErr: "H1 (100-200) and H2 (200) overlap"},
 
 		// I1-I5
 		{name: "I all tags", cfg: wgtypes.Config{I1: strPtr("<b 0xc0ffee><c><t><r 16><rc 8><rd 4>")}},

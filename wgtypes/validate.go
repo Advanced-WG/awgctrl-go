@@ -32,7 +32,8 @@ const (
 // describe at most 65535 bytes.
 //
 // Only fields that are set are checked, so a partial update is validated on
-// its own; relations to values already on the device cannot be checked here.
+// its own; relations to values already on the device cannot be checked here
+// (Client.ConfigureDevice does that for partial Jc/Jmin/Jmax and H1-H4 updates).
 // The amneziawg-go userspace daemon is stricter in one point: it rejects Jc,
 // Jmin and Jmax of 0.
 func (cfg *Config) Validate() error {
@@ -78,8 +79,8 @@ func (cfg *Config) Validate() error {
 	}
 
 	type hRange struct {
-		name       string
-		start, end uint32
+		name, value string
+		start, end  uint32
 	}
 	var headers []hRange
 	for i, h := range []*string{cfg.H1, cfg.H2, cfg.H3, cfg.H4} {
@@ -93,10 +94,10 @@ func (cfg *Config) Validate() error {
 		}
 		for _, o := range headers {
 			if start <= o.end && o.start <= end {
-				return fmt.Errorf("wgtypes: %s (%s) overlaps %s", name, *h, o.name)
+				return fmt.Errorf("wgtypes: %s (%s) and %s (%s) overlap", o.name, o.value, name, *h)
 			}
 		}
-		headers = append(headers, hRange{name, start, end})
+		headers = append(headers, hRange{name, *h, start, end})
 	}
 
 	for i, spec := range []*string{cfg.I1, cfg.I2, cfg.I3, cfg.I4, cfg.I5} {

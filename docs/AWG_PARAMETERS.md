@@ -152,6 +152,14 @@ It checks:
 - `H1–H4` are `N` or `N-M` (32-bit, `N ≤ M`) and do not overlap each other
 - `I1–I5` only use known tags with valid arguments and describe at most 65535 bytes
 
+`Validate()` sees only the fields that are set. The kernel checks a partial
+update together with the device's current values, so e.g. `Jmin = 500` alone on a
+device with `Jmax = 100`, or `H1 = 250-260` alone next to `H2 = 200-300`, is
+rejected there. `Client.ConfigureDevice` covers this: when the config sets only
+some of `Jc`/`Jmin`/`Jmax` or of `H1–H4`, it reads the device once and validates
+the merged values, so the conflict is reported with a clear error. Configs that
+set each group completely (or not at all) are not read.
+
 Only the fields that are set are checked, so a partial update is validated on its
 own. `wgtypes.ParseMagicHeader` and `wgtypes.InitPacketSize` expose the H and I
 parsers for applications that need them.
