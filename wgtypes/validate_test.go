@@ -1,8 +1,10 @@
 package wgtypes_test
 
 import (
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/advanced-wg/awgctrl-go/wgtypes"
 )
@@ -10,6 +12,7 @@ import (
 func TestConfigValidate(t *testing.T) {
 	intPtr := func(i int) *int { return &i }
 	strPtr := func(s string) *string { return &s }
+	durPtr := func(d time.Duration) *time.Duration { return &d }
 
 	tests := []struct {
 		name    string
@@ -17,6 +20,15 @@ func TestConfigValidate(t *testing.T) {
 		wantErr string // substring; empty = valid
 	}{
 		{name: "empty config is valid", cfg: wgtypes.Config{}},
+
+		// ListenPort, FirewallMark, keepalive: netlink widths
+		{name: "ListenPort max", cfg: wgtypes.Config{ListenPort: intPtr(65535)}},
+		{name: "ListenPort above u16", cfg: wgtypes.Config{ListenPort: intPtr(70000)}, wantErr: "ListenPort must be 0-65535, got 70000"},
+		{name: "ListenPort negative", cfg: wgtypes.Config{ListenPort: intPtr(-1)}, wantErr: "ListenPort must be"},
+		{name: "FirewallMark negative", cfg: wgtypes.Config{FirewallMark: intPtr(-1)}, wantErr: "FirewallMark must be"},
+		{name: "keepalive max", cfg: wgtypes.Config{Peers: []wgtypes.PeerConfig{{PersistentKeepaliveInterval: durPtr(65535 * time.Second)}}}},
+		{name: "keepalive above u16", cfg: wgtypes.Config{Peers: []wgtypes.PeerConfig{{PersistentKeepaliveInterval: durPtr(70000 * time.Second)}}}, wantErr: "PersistentKeepaliveInterval must be 0-65535s, got 19h26m40s"},
+		{name: "keepalive negative", cfg: wgtypes.Config{Peers: []wgtypes.PeerConfig{{PersistentKeepaliveInterval: durPtr(-time.Second)}}}, wantErr: "PersistentKeepaliveInterval must be"},
 
 		// Jc / Jmin / Jmax: 16-bit, Jmax < 65535, Jmin <= Jmax
 		{name: "Jc above old limit 10", cfg: wgtypes.Config{Jc: intPtr(128)}},
@@ -123,5 +135,22 @@ func TestParseMagicHeader(t *testing.T) {
 		if err != nil || start != want[0] || end != want[1] {
 			t.Errorf("ParseMagicHeader(%q) = %d, %d, %v; want %d, %d", in, start, end, err, want[0], want[1])
 		}
+	}
+}
+
+// FirewallMark is 32-bit in netlink; an int can only exceed that on 64-bit
+// platforms.
+func TestConfigValidateFirewallMark64(t *testing.T) {
+	if strconv.IntSize < 64 {
+		t.Skip("int is 32-bit")
+	}
+	var max uint64 = 0xffffffff
+	ok, over := int(max), int(max+1)
+	if err := (&wgtypes.Config{FirewallMark: &ok}).Validate(); err != nil {
+		t.Fatalf("FirewallMark %d: %v", ok, err)
+	}
+	err := (&wgtypes.Config{FirewallMark: &over}).Validate()
+	if err == nil || !strings.Contains(err.Error(), "FirewallMark must be 0-4294967295") {
+		t.Fatalf("FirewallMark %d: got %v", over, err)
 	}
 }

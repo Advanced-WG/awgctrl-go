@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Kernel limits, mirrored from the AmneziaWG kernel module (device.c,
@@ -21,8 +22,13 @@ const (
 	messageTransportSize  = 32 // header plus authentication tag of an empty packet
 )
 
-// Validate checks the AmneziaWG fields of cfg against the kernel module's
-// limits and returns an error describing the first violation found.
+// Validate checks cfg against the limits of the kernel's netlink encoding and
+// the AmneziaWG kernel module, and returns an error describing the first
+// violation found.
+//
+// ListenPort and every peer's PersistentKeepaliveInterval (whole seconds) are
+// 16-bit and FirewallMark is 32-bit; none of them may be negative. Larger
+// values would otherwise wrap, e.g. ListenPort 70000 becomes 4464.
 //
 // Jc, Jmin and Jmax are 16-bit and Jmax must stay below 65535; Jmin <= Jmax
 // is checked when both are set (Jmax 0 disables junk packets). S1-S4 plus the
@@ -37,6 +43,18 @@ const (
 // The amneziawg-go userspace daemon is stricter in one point: it rejects Jc,
 // Jmin and Jmax of 0.
 func (cfg *Config) Validate() error {
+	if cfg.ListenPort != nil && (*cfg.ListenPort < 0 || *cfg.ListenPort > 0xffff) {
+		return fmt.Errorf("wgtypes: ListenPort must be 0-65535, got %d", *cfg.ListenPort)
+	}
+	if cfg.FirewallMark != nil && (*cfg.FirewallMark < 0 || int64(*cfg.FirewallMark) > 0xffffffff) {
+		return fmt.Errorf("wgtypes: FirewallMark must be 0-4294967295, got %d", *cfg.FirewallMark)
+	}
+	for _, p := range cfg.Peers {
+		if ka := p.PersistentKeepaliveInterval; ka != nil && (*ka < 0 || *ka > 0xffff*time.Second) {
+			return fmt.Errorf("wgtypes: peer %s: PersistentKeepaliveInterval must be 0-65535s, got %s", p.PublicKey, *ka)
+		}
+	}
+
 	u16 := []struct {
 		name string
 		v    *int

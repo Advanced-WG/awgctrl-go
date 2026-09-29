@@ -145,6 +145,8 @@ before the netlink call instead of as a bare `EINVAL`. It does not enforce the
 recommended ranges above; that is a policy decision for the application.
 
 It checks:
+- `ListenPort` and each peer's `PersistentKeepaliveInterval` are 16-bit (0-65535, keepalive in
+  seconds) and `FirewallMark` is 32-bit; larger or negative values are rejected instead of wrapping
 - `Jc`, `Jmin`, `Jmax` are 16-bit; `Jmax < 65535`; `Jmin ≤ Jmax` when both are set
   (`Jmax = 0` turns junk packets off); `Jmin = Jmax = 65534` with junk packets on is
   rejected because the kernel then uses `Jmax + 1`
