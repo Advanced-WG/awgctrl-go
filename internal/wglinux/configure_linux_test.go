@@ -566,7 +566,7 @@ func TestLinuxClientConfigureDeviceAWGParams(t *testing.T) {
 		return []genetlink.Message{{}}, nil
 	}
 
-	c := testClient(t, configureHandler(fn))
+	c := testAWGClient(t, configureHandler(fn))
 	defer c.Close()
 
 	if err := c.ConfigureDevice(context.Background(), okName, cfg); err != nil {
@@ -607,7 +607,7 @@ func TestLinuxClientConfigureDeviceAWGPartial(t *testing.T) {
 		return []genetlink.Message{{}}, nil
 	}
 
-	c := testClient(t, configureHandler(fn))
+	c := testAWGClient(t, configureHandler(fn))
 	defer c.Close()
 
 	if err := c.ConfigureDevice(context.Background(), okName, cfg); err != nil {
@@ -673,7 +673,7 @@ func TestLinuxClientConfigureDevicePeerAdvancedSecurity(t *testing.T) {
 		return []genetlink.Message{{}}, nil
 	}
 
-	c := testClient(t, configureHandler(fn))
+	c := testAWGClient(t, configureHandler(fn))
 	defer c.Close()
 
 	if err := c.ConfigureDevice(context.Background(), okName, cfg); err != nil {

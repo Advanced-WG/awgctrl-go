@@ -361,10 +361,20 @@ func Test_parseRTNLInterfacesAmneziaWG(t *testing.T) {
 const familyID = 20
 
 func testClient(t *testing.T, fn genltest.Func) *Client {
+	return testClientFamily(t, unix.WG_GENL_NAME, wgKind, fn)
+}
+
+// testAWGClient is testClient for an AmneziaWG device (amneziawg family and
+// link kind).
+func testAWGClient(t *testing.T, fn genltest.Func) *Client {
+	return testClientFamily(t, amneziaGenlName, amneziaKind, fn)
+}
+
+func testClientFamily(t *testing.T, name, kind string, fn genltest.Func) *Client {
 	family := genetlink.Family{
 		ID:      familyID,
 		Version: unix.WG_GENL_VERSION,
-		Name:    unix.WG_GENL_NAME,
+		Name:    name,
 	}
 
 	conn := genltest.Dial(genltest.ServeFamily(family, fn))
@@ -380,7 +390,7 @@ func testClient(t *testing.T, fn genltest.Func) *Client {
 	c.interfaces = func() ([]string, error) {
 		return []string{okName}, nil
 	}
-	c.linkKind = func(string) (string, error) { return wgKind, nil }
+	c.linkKind = func(string) (string, error) { return kind, nil }
 
 	return c
 }
@@ -502,5 +512,94 @@ func TestClientConfigureDeviceNoDump(t *testing.T) {
 	c.linkKind = func(string) (string, error) { return "", os.ErrNotExist }
 	if _, err := c.Device(context.Background(), "nope0"); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("missing link: %v, want not exist", err)
+	}
+}
+
+// AmneziaWG fields sent to a plain WireGuard link get a clear error instead
+// of the kernel's bare EINVAL, and nothing is sent.
+func TestClientConfigureDeviceAWGOnWireGuard(t *testing.T) {
+	sent := false
+	c := testClient(t, func(_ genetlink.Message, nreq netlink.Message) ([]genetlink.Message, error) {
+		if nreq.Header.Type == familyID {
+			sent = true
+		}
+		return nil, nil
+	})
+	defer c.Close()
+
+	jc := 4
+	for _, cfg := range []wgtypes.Config{
+		{Jc: &jc},
+		{Peers: []wgtypes.PeerConfig{{AdvancedSecurity: true}}},
+	} {
+		err := c.ConfigureDevice(context.Background(), okName, cfg)
+		if !errors.Is(err, wgtypes.ErrAWGNotSupported) {
+			t.Fatalf("ConfigureDevice = %v, want ErrAWGNotSupported", err)
+		}
+	}
+	if sent {
+		t.Fatal("AWG fields were sent to a WireGuard device")
+	}
+
+	// Plain WireGuard fields still go through.
+	if err := c.ConfigureDevice(context.Background(), okName, wgtypes.Config{ListenPort: intPtr(51820)}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// An amneziawg family newer than the one this package encodes (AmneziaWG 3)
+// is refused with a clear error for reads and writes.
+func TestClientAWGVersionNotSupported(t *testing.T) {
+	c := testClient(t, func(_ genetlink.Message, nreq netlink.Message) ([]genetlink.Message, error) {
+		if nreq.Header.Type == familyID {
+			t.Fatal("request sent to an unsupported family version")
+		}
+		return nil, nil
+	})
+	defer c.Close()
+
+	c.linkKind = func(string) (string, error) { return amneziaKind, nil }
+	for v, ok := range map[uint8]bool{2: true, 3: false} {
+		c.amneziaFamily = &genetlink.Family{ID: familyID + 1, Name: amneziaGenlName, Version: v}
+		_, err := c.familyFor("awg0")
+		if ok != (err == nil) {
+			t.Fatalf("version %d: familyFor = %v", v, err)
+		}
+		if !ok && !errors.Is(err, wgtypes.ErrAWGVersionNotSupported) {
+			t.Fatalf("version %d: %v, want ErrAWGVersionNotSupported", v, err)
+		}
+	}
+	if _, err := c.Device(context.Background(), "awg0"); !errors.Is(err, wgtypes.ErrAWGVersionNotSupported) {
+		t.Fatalf("Device = %v", err)
+	}
+	if err := c.ConfigureDevice(context.Background(), "awg0", wgtypes.Config{}); !errors.Is(err, wgtypes.ErrAWGVersionNotSupported) {
+		t.Fatalf("ConfigureDevice = %v", err)
+	}
+}
+
+// A link removed between listing and reading it is skipped, not an error
+// for all devices.
+func TestLinuxClientDevicesSkipsRemoved(t *testing.T) {
+	c := testClient(t, func(_ genetlink.Message, _ netlink.Message) ([]genetlink.Message, error) {
+		return []genetlink.Message{{Data: nltest.MustMarshalAttributes([]netlink.Attribute{{
+			Type: unix.WGDEVICE_A_IFNAME, Data: nlenc.Bytes(okName),
+		}})}}, nil
+	})
+	defer c.Close()
+
+	c.interfaces = func() ([]string, error) { return []string{"gone0", okName}, nil }
+	c.linkKind = func(name string) (string, error) {
+		if name == "gone0" {
+			return "", os.ErrNotExist
+		}
+		return wgKind, nil
+	}
+
+	ds, err := c.Devices(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ds) != 1 || ds[0].Name != okName {
+		t.Fatalf("devices = %v, want only %s", ds, okName)
 	}
 }

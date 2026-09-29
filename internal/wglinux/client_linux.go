@@ -22,6 +22,11 @@ import (
 const (
 	amneziaGenlName = "amneziawg"
 	amneziaKind     = "amneziawg"
+
+	// amneziaGenlVersion is the only amneziawg netlink version this package
+	// encodes: AmneziaWG 2.0, with H1-H4 as strings and a 16-bit keepalive.
+	// AmneziaWG 3 (version 3) encodes both differently.
+	amneziaGenlVersion = 2
 )
 
 var _ wginternal.Client = &Client{}
@@ -124,6 +129,10 @@ func (c *Client) Devices(ctx context.Context) ([]*wgtypes.Device, error) {
 	ds := make([]*wgtypes.Device, 0, len(ifis))
 	for _, ifi := range ifis {
 		d, err := c.Device(ctx, ifi)
+		if errors.Is(err, os.ErrNotExist) {
+			// Removed since the list was read (e.g. an interface restart).
+			continue
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -160,6 +169,11 @@ func (c *Client) ConfigureDevice(ctx context.Context, name string, cfg wgtypes.C
 	family, err := c.familyFor(name)
 	if err != nil {
 		return err
+	}
+
+	if family.Name != amneziaGenlName && hasAWGFields(cfg) {
+		// The WireGuard family rejects these with a bare EINVAL.
+		return fmt.Errorf("wglinux: %s: %w", name, wgtypes.ErrAWGNotSupported)
 	}
 
 	batches := buildBatches(cfg)
@@ -199,6 +213,10 @@ func (c *Client) familyFor(name string) (*genetlink.Family, error) {
 	case kind == wgKind && c.wgFamily != nil:
 		return c.wgFamily, nil
 	case kind == amneziaKind && c.amneziaFamily != nil:
+		if v := c.amneziaFamily.Version; v > amneziaGenlVersion {
+			return nil, fmt.Errorf("wglinux: %s: %w (the kernel module speaks version %d, this library %d)",
+				name, wgtypes.ErrAWGVersionNotSupported, v, amneziaGenlVersion)
+		}
 		return c.amneziaFamily, nil
 	}
 

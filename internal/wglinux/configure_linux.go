@@ -156,6 +156,26 @@ func configAttrs(name string, cfg wgtypes.Config) ([]byte, error) {
 	return ae.Encode()
 }
 
+// hasAWGFields reports whether cfg sets anything only AmneziaWG understands.
+func hasAWGFields(cfg wgtypes.Config) bool {
+	for _, v := range []*int{cfg.Jc, cfg.Jmin, cfg.Jmax, cfg.S1, cfg.S2, cfg.S3, cfg.S4} {
+		if v != nil {
+			return true
+		}
+	}
+	for _, v := range []*string{cfg.H1, cfg.H2, cfg.H3, cfg.H4, cfg.I1, cfg.I2, cfg.I3, cfg.I4, cfg.I5} {
+		if v != nil {
+			return true
+		}
+	}
+	for _, p := range cfg.Peers {
+		if p.AdvancedSecurity {
+			return true
+		}
+	}
+	return false
+}
+
 // ipBatchChunk is a tunable allowed IP batch limit per peer.
 //
 // Because we don't necessarily know how much space a given peer will occupy,
