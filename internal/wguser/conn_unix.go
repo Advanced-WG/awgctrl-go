@@ -10,11 +10,18 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"syscall"
 )
 
 // dial is the default implementation of Client.dial.
 func dial(ctx context.Context, device string) (net.Conn, error) {
 	return (&net.Dialer{}).DialContext(ctx, "unix", device)
+}
+
+// isStaleSocket reports whether err is a dial to a socket file that no
+// process listens on any more.
+func isStaleSocket(err error) bool {
+	return errors.Is(err, syscall.ECONNREFUSED)
 }
 
 // find is the default implementation of Client.find.

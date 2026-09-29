@@ -2,6 +2,7 @@ package wguser
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -48,6 +49,12 @@ func (c *Client) Devices(ctx context.Context) ([]*wgtypes.Device, error) {
 	wgds := make([]*wgtypes.Device, 0, len(devices))
 	for _, d := range devices {
 		wgd, err := c.getDevice(ctx, d)
+		if errors.Is(err, os.ErrNotExist) || isStaleSocket(err) {
+			// The daemon exited (or the socket was removed) after the
+			// directory was listed; one dead socket must not hide the
+			// other devices.
+			continue
+		}
 		if err != nil {
 			return nil, err
 		}

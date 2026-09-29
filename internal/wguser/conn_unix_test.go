@@ -88,3 +88,31 @@ func testListen(t *testing.T, device string) (l net.Listener, dir string, done f
 var testDial = func(ctx context.Context, device string) (net.Conn, error) {
 	return (&net.Dialer{}).DialContext(ctx, "unix", device)
 }
+
+// A socket file left behind by an exited daemon (connection refused) is
+// skipped by Devices instead of failing it for every device.
+func TestUNIX_DevicesSkipsStaleSocket(t *testing.T) {
+	c, done := testClient(t, []byte("private_key=e84b5a6d2717c1003a13b431570353dbaca9146cf150c5f8575680feba52027a\nerrno=0\n\n"))
+	defer done()
+
+	devs, err := c.find()
+	if err != nil || len(devs) != 1 {
+		t.Fatalf("find = %v, %v", devs, err)
+	}
+
+	stale := filepath.Join(filepath.Dir(devs[0]), "stale0.sock")
+	l, err := net.ListenUnix("unix", &net.UnixAddr{Name: stale, Net: "unix"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.SetUnlinkOnClose(false)
+	_ = l.Close()
+
+	ds, err := c.Devices(context.Background())
+	if err != nil {
+		t.Fatalf("Devices: %v", err)
+	}
+	if len(ds) != 1 || ds[0].Name != testDevice {
+		t.Fatalf("devices = %v, want only %s", ds, testDevice)
+	}
+}

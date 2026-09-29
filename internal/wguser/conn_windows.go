@@ -40,6 +40,10 @@ func dial(ctx context.Context, device string) (net.Conn, error) {
 	}).DialTimeout(device, timeout)
 }
 
+// isStaleSocket reports whether err is a dial to a socket that no process
+// listens on any more; a missing named pipe is already os.ErrNotExist.
+func isStaleSocket(err error) bool { return false }
+
 // find is the default implementation of Client.find.
 func find() ([]string, error) {
 	return findNamedPipes(wgPrefix)
