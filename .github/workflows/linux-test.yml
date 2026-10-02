@@ -27,7 +27,10 @@ jobs:
 
     # An existing device for TestLinuxClientIsPermission: reading it without
     # CAP_NET_ADMIN must fail with permission denied (tests run unprivileged).
+    # Only where the job runs on a virtual machine: a container job (Gitea
+    # Actions) cannot create network devices, and the test skips itself there.
     - name: Create a WireGuard device
+      if: github.server_url == 'https://github.com'
       run: sudo ip link add wgperm0 type wireguard
 
     - name: Run tests

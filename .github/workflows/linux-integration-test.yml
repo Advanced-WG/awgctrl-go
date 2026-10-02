@@ -10,6 +10,9 @@ on:
 
 jobs:
   build:
+    # Needs kernel WireGuard devices and a TUN device: a virtual machine, not
+    # the container a Gitea Actions job runs in.
+    if: github.server_url == 'https://github.com'
     strategy:
       matrix:
         go-version: ["1.26"]
