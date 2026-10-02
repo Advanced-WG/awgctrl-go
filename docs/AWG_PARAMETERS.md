@@ -119,6 +119,11 @@ Each field is a string composed of one or more tags that describe packet segment
 
 Tags can be combined: `"<r 10><b 0xff><c>"`
 
+Only spaces may stand between the tags, every tag must be closed, and a tag
+with a value has exactly one space before it (`<r 10>`, not `<r  10>`). The
+kernel module refuses anything else, e.g. `0` or `text <r 10>`; leave the field
+empty for no packet.
+
 `GenerateAmneziaParams()` uses `<r N>` (random bytes) for all five fields, which is
 the simplest and most DPI-resistant option.
 
@@ -152,7 +157,8 @@ It checks:
   rejected because the kernel then uses `Jmax + 1`
 - `S1–S4` plus their base message size fit in 65535 bytes
 - `H1–H4` are `N` or `N-M` (32-bit, `N ≤ M`) and do not overlap each other
-- `I1–I5` only use known tags with valid arguments and describe at most 65535 bytes
+- `I1–I5` only use known tags with valid arguments, have nothing but spaces between
+  the tags, and describe at most 65535 bytes
 
 `Validate()` sees only the fields that are set. The kernel checks a partial
 update together with the device's current values, so e.g. `Jmin = 500` alone on a

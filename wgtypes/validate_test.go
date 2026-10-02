@@ -70,7 +70,11 @@ func TestConfigValidate(t *testing.T) {
 
 		// I1-I5
 		{name: "I all tags", cfg: wgtypes.Config{I1: strPtr("<b 0xc0ffee><c><t><r 16><rc 8><rd 4>")}},
-		{name: "I text outside tags ignored", cfg: wgtypes.Config{I2: strPtr("junk <r 5> junk")}},
+		{name: "I spaces between tags", cfg: wgtypes.Config{I2: strPtr(" <rc 8> <rd 4> ")}},
+		{name: "I text outside tags", cfg: wgtypes.Config{I2: strPtr("junk <r 5> junk")}, wantErr: `I2: "junk" is outside the tags`},
+		{name: "I text after tags", cfg: wgtypes.Config{I2: strPtr("<r 5>x")}, wantErr: `"x" is outside the tags`},
+		{name: "I number instead of tags", cfg: wgtypes.Config{I1: strPtr("0")}, wantErr: `"0" is outside the tags`},
+		{name: "I stray closing bracket", cfg: wgtypes.Config{I1: strPtr("<r 5>>")}, wantErr: "outside the tags"},
 		{name: "I empty", cfg: wgtypes.Config{I1: strPtr("")}},
 		{name: "I b empty", cfg: wgtypes.Config{I1: strPtr("<b 0x>")}, wantErr: "I1: <b 0x>: <b> needs hex bytes"},
 		{name: "I b odd hex", cfg: wgtypes.Config{I1: strPtr("<b 0xabc>")}, wantErr: "needs hex bytes"},
@@ -82,7 +86,9 @@ func TestConfigValidate(t *testing.T) {
 		{name: "I r missing", cfg: wgtypes.Config{I1: strPtr("<r>")}, wantErr: "needs a positive length"},
 		{name: "I unknown tag", cfg: wgtypes.Config{I5: strPtr("<x 1>")}, wantErr: `I5: <x 1>: unknown tag "x"`},
 		{name: "I empty tag", cfg: wgtypes.Config{I1: strPtr("<>")}, wantErr: "unknown tag"},
-		{name: "I unterminated tag", cfg: wgtypes.Config{I1: strPtr("<r 5")}},
+		{name: "I unterminated tag", cfg: wgtypes.Config{I1: strPtr("<r 5")}, wantErr: "I1: <r 5: the tag is not closed"},
+		{name: "I c with a space", cfg: wgtypes.Config{I1: strPtr("<c >")}, wantErr: "takes no value"},
+		{name: "I r two spaces", cfg: wgtypes.Config{I1: strPtr("<r  8>")}, wantErr: "needs a positive length"},
 		{name: "I max size", cfg: wgtypes.Config{I1: strPtr("<r 65531><c>")}},
 		{name: "I too large", cfg: wgtypes.Config{I1: strPtr("<r 65532><c>")}, wantErr: "exceed 65535"},
 		{name: "I int overflow sum", cfg: wgtypes.Config{I1: strPtr("<r 2147483647><r 2147483647><b 0x0102>")}, wantErr: "exceed 65535"},
@@ -114,7 +120,7 @@ func TestConfigValidate(t *testing.T) {
 }
 
 func TestInitPacketSize(t *testing.T) {
-	got, err := wgtypes.InitPacketSize("x<b 0xdeadbeef> <c><t><r 10><rc 3><rd 2>y")
+	got, err := wgtypes.InitPacketSize(" <b 0xdeadbeef> <c><t><r 10><rc 3><rd 2>\n")
 	if err != nil {
 		t.Fatal(err)
 	}

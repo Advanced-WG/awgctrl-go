@@ -157,7 +157,8 @@ func parseKernelUint32(s string) (uint32, error) {
 }
 
 // InitPacketSize parses an I1-I5 description the way the kernel does and
-// returns the size of the packet it produces. Text outside <...> is ignored.
+// returns the size of the packet it produces. Only white space may stand
+// between the tags, and every tag must be closed.
 // Tags: <b 0xHEX> literal bytes, <c> packet counter and <t> unix time (4
 // bytes each), <r N> random bytes, <rc N> random letters, <rd N> random
 // digits. The packet may not exceed 65535 bytes.
@@ -165,12 +166,17 @@ func InitPacketSize(spec string) (int, error) {
 	size := 0
 	rest := spec
 	for {
-		_, after, found := strings.Cut(rest, "<")
+		text, after, found := strings.Cut(rest, "<")
+		if blank := strings.Trim(text, " \t\n\v\f\r"); blank != "" {
+			return 0, fmt.Errorf("%q is outside the tags", blank)
+		}
 		if !found {
 			return size, nil
 		}
-		// Like the kernel's strsep, an unterminated tag runs to the end.
-		tag, next, _ := strings.Cut(after, ">")
+		tag, next, closed := strings.Cut(after, ">")
+		if !closed {
+			return 0, fmt.Errorf("<%s: the tag is not closed", tag)
+		}
 		rest = next
 
 		key, val, hasVal := strings.Cut(tag, " ")
