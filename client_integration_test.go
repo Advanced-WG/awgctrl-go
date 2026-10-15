@@ -43,6 +43,10 @@ func TestIntegrationClient(t *testing.T) {
 			fn:   testGet,
 		},
 		{
+			name: "context",
+			fn:   testContext,
+		},
+		{
 			name: "configure",
 			fn:   testConfigure,
 		},
@@ -141,6 +145,34 @@ func testGet(t *testing.T, c *wgctrl.Client, d *wgtypes.Device) {
 
 	if diff := cmp.Diff(d, dn); diff != "" {
 		t.Fatalf("unexpected Device (-want +got):\n%s", diff)
+	}
+}
+
+// A call with a deadline works, and the deadline does not stay on the
+// connection: a later call without one, after it passed, works too.
+func testContext(t *testing.T, c *wgctrl.Client, d *wgtypes.Device) {
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	defer cancel()
+	if _, err := c.Device(ctx, d.Name); err != nil {
+		t.Fatalf("with a deadline: %v", err)
+	}
+	if err := c.ConfigureDevice(ctx, d.Name, wgtypes.Config{}); err != nil {
+		t.Fatalf("configure with a deadline: %v", err)
+	}
+	<-ctx.Done()
+	if _, err := c.Device(ctx, d.Name); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("after the deadline: %v", err)
+	}
+	if _, err := c.Device(context.Background(), d.Name); err != nil {
+		t.Fatalf("a call after the deadline passed: %v", err)
+	}
+	cctx, ccancel := context.WithCancel(context.Background())
+	if _, err := c.Device(cctx, d.Name); err != nil {
+		t.Fatalf("with a cancel: %v", err)
+	}
+	ccancel()
+	if _, err := c.Device(context.Background(), d.Name); err != nil {
+		t.Fatalf("a call after a cancel: %v", err)
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+	"time"
 
 	"github.com/advanced-wg/awgctrl-go/internal/wginternal"
 	"github.com/advanced-wg/awgctrl-go/wgtypes"
@@ -157,7 +158,12 @@ func (c *Client) Device(ctx context.Context, name string) (*wgtypes.Device, erro
 	if err != nil {
 		return nil, err
 	}
-	return c.getDeviceInternal(name, *family)
+	var d *wgtypes.Device
+	err = c.withContext(ctx, func() (err error) {
+		d, err = c.getDeviceInternal(name, *family)
+		return err
+	})
+	return d, err
 }
 
 // ConfigureDevice implements wginternal.Client.
@@ -192,12 +198,51 @@ func (c *Client) ConfigureDevice(ctx context.Context, name string, cfg wgtypes.C
 		}
 
 		// Proceed with the family determined in the first step.
-		if _, err := c.execute(*family, unix.WG_CMD_SET_DEVICE, netlink.Request|netlink.Acknowledge, attrs); err != nil {
+		if err := c.withContext(ctx, func() error {
+			_, err := c.execute(*family, unix.WG_CMD_SET_DEVICE, netlink.Request|netlink.Acknowledge, attrs)
+			return err
+		}); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// withContext runs the netlink calls of fn bounded by ctx: its deadline is
+// set on the socket, and cancelling it interrupts a call that is waiting
+// for the kernel. Before, ctx was checked only before the call, so a
+// request the kernel did not answer blocked for ever (and with it whoever
+// held the caller's locks). A socket that has no deadlines (the test
+// connections) runs fn unbounded.
+//
+// The deadline belongs to the socket: calls on one Client from several
+// goroutines with different contexts bound each other.
+func (c *Client) withContext(ctx context.Context, fn func() error) error {
+	if ctx.Done() == nil {
+		return fn()
+	}
+	if dl, ok := ctx.Deadline(); ok {
+		if err := c.c.SetDeadline(dl); err != nil {
+			return fn()
+		}
+	}
+	fired := make(chan struct{})
+	stop := context.AfterFunc(ctx, func() {
+		_ = c.c.SetDeadline(time.Unix(1, 0)) // in the past: the blocked read returns
+		close(fired)
+	})
+	defer func() {
+		if !stop() {
+			<-fired // it ran: clear the deadline after it, not before
+		}
+		_ = c.c.SetDeadline(time.Time{})
+	}()
+	err := fn()
+	if err != nil && ctx.Err() != nil {
+		return fmt.Errorf("wglinux: %w (%v)", ctx.Err(), err)
+	}
+	return err
 }
 
 // familyFor returns the generic netlink family that serves the named device,
