@@ -29,8 +29,13 @@ if [ "${KERNEL}" == "Linux" ]; then
 fi
 
 # Set up wireguard-go on all OSes.
-git clone https://git.zx2c4.com/wireguard-go
+# A release, checked against the commit it had (LIB-07: master was built,
+# so the tests ran against whatever was pushed last).
+WIREGUARD_GO_TAG=0.0.20250522
+WIREGUARD_GO_COMMIT=f333402bd9cbe0f3eeb02507bd14e23d7d639280
+git clone --depth 1 --branch "${WIREGUARD_GO_TAG}" https://git.zx2c4.com/wireguard-go
 cd wireguard-go
+test "$(git rev-parse HEAD)" = "${WIREGUARD_GO_COMMIT}"
 
 if [ "${KERNEL}" == "Linux" ]; then
     # Bypass Linux compilation restriction.
