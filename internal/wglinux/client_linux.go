@@ -199,7 +199,7 @@ func (c *Client) ConfigureDevice(ctx context.Context, name string, cfg wgtypes.C
 
 		// Proceed with the family determined in the first step.
 		if err := c.withContext(ctx, func() error {
-			_, err := c.execute(*family, unix.WG_CMD_SET_DEVICE, netlink.Request|netlink.Acknowledge, attrs)
+			_, err := c.execute(*family, unix.WG_CMD_SET_DEVICE, netlink.Request|netlink.Acknowledge, attrs, name)
 			return err
 		}); err != nil {
 			return err
@@ -279,7 +279,7 @@ func (c *Client) getDeviceInternal(name string, family genetlink.Family) (*wgtyp
 		return nil, err
 	}
 
-	msgs, err := c.execute(family, unix.WG_CMD_GET_DEVICE, netlink.Request|netlink.Dump, b)
+	msgs, err := c.execute(family, unix.WG_CMD_GET_DEVICE, netlink.Request|netlink.Dump, b, name)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +298,12 @@ func (c *Client) getDeviceInternal(name string, family genetlink.Family) (*wgtyp
 
 // execute executes a single Netlink request.
 // It uses the passed family to determine the Family ID and the Generic Netlink Version.
-func (c *Client) execute(family genetlink.Family, command uint8, flags netlink.HeaderFlags, attrb []byte) ([]genetlink.Message, error) {
+//
+// A failure names the command and the device (LIB-01: the bare errno came
+// back, "operation not supported" with nothing to say where). ENODEV and
+// ENOTSUP, a device that is gone or is not WireGuard, still match
+// os.ErrNotExist, and every errno still matches with errors.Is.
+func (c *Client) execute(family genetlink.Family, command uint8, flags netlink.HeaderFlags, attrb []byte, device string) ([]genetlink.Message, error) {
 	msg := genetlink.Message{
 		Header: genetlink.Header{
 			Command: command,
@@ -312,16 +317,20 @@ func (c *Client) execute(family genetlink.Family, command uint8, flags netlink.H
 		return msgs, nil
 	}
 
-	oerr, ok := err.(*netlink.OpError)
-	if !ok {
-		return nil, fmt.Errorf("wglinux: netlink operation returned non-netlink error: %w", err)
+	op := "get device"
+	if command == unix.WG_CMD_SET_DEVICE {
+		op = "set device"
+	}
+	var oerr *netlink.OpError
+	if !errors.As(err, &oerr) {
+		return nil, fmt.Errorf("wglinux: %s %q (%s): netlink operation returned non-netlink error: %w", op, device, family.Name, err)
 	}
 
 	switch oerr.Err {
 	case unix.ENODEV, unix.ENOTSUP:
-		return nil, os.ErrNotExist
+		return nil, fmt.Errorf("wglinux: %s %q (%s): no such WireGuard device: %w: %w", op, device, family.Name, os.ErrNotExist, oerr.Err)
 	default:
-		return nil, oerr.Err
+		return nil, fmt.Errorf("wglinux: %s %q (%s): %w", op, device, family.Name, oerr.Err)
 	}
 }
 

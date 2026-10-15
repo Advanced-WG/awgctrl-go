@@ -10,6 +10,7 @@ import (
 	"net"
 	"os"
 	"os/user"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -601,5 +602,30 @@ func TestLinuxClientDevicesSkipsRemoved(t *testing.T) {
 	}
 	if len(ds) != 1 || ds[0].Name != okName {
 		t.Fatalf("devices = %v, want only %s", ds, okName)
+	}
+}
+
+// LIB-01: a netlink failure names the command and the device, and still
+// matches its errno (and os.ErrNotExist for a missing device).
+func TestLinuxClientErrorsNameTheDevice(t *testing.T) {
+	for _, tt := range []struct {
+		errno    unix.Errno
+		notExist bool
+	}{{unix.ENODEV, true}, {unix.ENOTSUP, true}, {unix.EPERM, false}} {
+		c := testClient(t, func(_ genetlink.Message, _ netlink.Message) ([]genetlink.Message, error) {
+			return nil, genltest.Error(int(tt.errno))
+		})
+		c.linkKind = func(string) (string, error) { return wgKind, nil }
+		// only the set: genltest cannot answer a dump (the get) with an error
+		serr := c.ConfigureDevice(context.Background(), "wg7", wgtypes.Config{})
+		c.Close()
+		for op, err := range map[string]error{"set device": serr} {
+			if !errors.Is(err, tt.errno) || errors.Is(err, os.ErrNotExist) != tt.notExist {
+				t.Errorf("%v %s: %v", tt.errno, op, err)
+			}
+			if err == nil || !strings.Contains(err.Error(), op+` "wg7"`) {
+				t.Errorf("%v: the error does not name %s of wg7: %v", tt.errno, op, err)
+			}
+		}
 	}
 }
