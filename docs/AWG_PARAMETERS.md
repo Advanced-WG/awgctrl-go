@@ -15,15 +15,17 @@ random-size UDP packets to make the traffic pattern unrecognisable to DPI system
 
 | Parameter | Type | Kernel limit | Recommended | Description |
 |---|---|---|---|---|
-| `Jc` | int | 0–65535 | 0–10 | Number of junk packets sent before each handshake |
-| `Jmin` | int | 0–65535 | 64–1024 | Minimum junk packet size in bytes |
-| `Jmax` | int | 0–65534, ≥ Jmin | 64–1024 | Maximum junk packet size in bytes |
+| `Jc` | int | 0–128 | 0–10 | Number of junk packets sent before each handshake |
+| `Jmin` | int | 0–1280 | 64–1024 | Minimum junk packet size in bytes |
+| `Jmax` | int | 0–1280, ≥ Jmin | 64–1024 | Maximum junk packet size in bytes |
 
 **Notes:**
 - Setting `Jc = 0` disables junk packets entirely in the kernel; the
   `amneziawg-go` userspace daemon rejects `Jc`, `Jmin` and `Jmax` of 0
 - Keep `Jmax` below the path MTU (1280 is safe everywhere), or junk packets get fragmented
-- If `Jmin == Jmax`, the kernel increments `Jmax` by 1 automatically
+- The limits are those of the AmneziaWG kernel module (`AWG_JC_MAX`, `AWG_JUNK_SIZE_MAX`):
+  every handshake initiation sends `Jc` junk packets of up to `Jmax` bytes
+- `Jmin == Jmax` gives junk packets of exactly that size
 - Larger values provide stronger obfuscation but increase handshake overhead
 - `GenerateAmneziaParams()` generates Jc in the range 3–6 and packet sizes that resemble UDP application traffic
 
@@ -150,15 +152,15 @@ before the netlink call instead of as a bare `EINVAL`. It does not enforce the
 recommended ranges above; that is a policy decision for the application.
 
 It checks:
-- `ListenPort` and each peer's `PersistentKeepaliveInterval` are 16-bit (0-65535, keepalive in
-  seconds) and `FirewallMark` is 32-bit; larger or negative values are rejected instead of wrapping
-- `Jc`, `Jmin`, `Jmax` are 16-bit; `Jmax < 65535`; `Jmin ≤ Jmax` when both are set
-  (`Jmax = 0` turns junk packets off); `Jmin = Jmax = 65534` with junk packets on is
-  rejected because the kernel then uses `Jmax + 1`
+- `ListenPort`, each peer's `Endpoint` port and `PersistentKeepaliveInterval` are 16-bit
+  (0-65535, keepalive in seconds) and `FirewallMark` is 32-bit; larger or negative values are
+  rejected instead of wrapping
+- `Jc` is at most 128 and `Jmin`, `Jmax` at most 1280; `Jmin ≤ Jmax` when both are set
+  (`Jmax = 0` turns junk packets off)
 - `S1–S4` plus their base message size fit in 65535 bytes
 - `H1–H4` are `N` or `N-M` (32-bit, `N ≤ M`) and do not overlap each other
 - `I1–I5` only use known tags with valid arguments, have nothing but spaces between
-  the tags, and describe at most 65535 bytes
+  the tags, are at most 65530 characters (one netlink attribute) and describe at most 65535 bytes
 
 `Validate()` sees only the fields that are set. The kernel checks a partial
 update together with the device's current values, so e.g. `Jmin = 500` alone on a

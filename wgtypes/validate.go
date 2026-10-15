@@ -20,22 +20,35 @@ const (
 	messageResponseSize   = 92
 	messageCookieSize     = 64
 	messageTransportSize  = 32 // header plus authentication tag of an empty packet
+
+	// maxJunkCount and maxJunkSize are the kernel's AWG_JC_MAX and
+	// AWG_JUNK_SIZE_MAX (device.h): every handshake initiation sends Jc
+	// junk packets of up to Jmax bytes, so the kernel bounds both.
+	maxJunkCount = 128
+	maxJunkSize  = 1280
+
+	// maxInitSpecLen is the longest I1-I5 text: a netlink attribute is at
+	// most 65535 bytes with its 4-byte header and the terminating NUL. The
+	// UAPI line "i1=<spec>" then also fits the 64 KiB line of its parser.
+	maxInitSpecLen = 0xffff - 4 - 1
 )
 
 // Validate checks cfg against the limits of the kernel's netlink encoding and
 // the AmneziaWG kernel module, and returns an error describing the first
 // violation found.
 //
-// ListenPort and every peer's PersistentKeepaliveInterval (whole seconds) are
-// 16-bit and FirewallMark is 32-bit; none of them may be negative. Larger
-// values would otherwise wrap, e.g. ListenPort 70000 becomes 4464.
+// ListenPort, every peer's Endpoint port and PersistentKeepaliveInterval
+// (whole seconds) are 16-bit and FirewallMark is 32-bit; none of them may be
+// negative. Larger values would otherwise wrap, e.g. ListenPort 70000
+// becomes 4464.
 //
-// Jc, Jmin and Jmax are 16-bit and Jmax must stay below 65535; Jmin <= Jmax
-// is checked when both are set (Jmax 0 disables junk packets). S1-S4 plus the
-// size of their message must fit in 65535 bytes. H1-H4 are "N" or "N-M"
-// (32-bit, N <= M) and the ones set must not overlap. I1-I5 must use the
-// tags the kernel knows (<b 0xHEX>, <c>, <t>, <r N>, <rc N>, <rd N>) and
-// describe at most 65535 bytes.
+// Jc is at most 128 and Jmin and Jmax at most 1280, the limits of the
+// AmneziaWG kernel module; Jmin <= Jmax is checked when both are set (Jmax 0
+// disables junk packets). S1-S4 plus the size of their message must fit in
+// 65535 bytes. H1-H4 are "N" or "N-M" (32-bit, N <= M) and the ones set must
+// not overlap. I1-I5 must use the tags the kernel knows (<b 0xHEX>, <c>, <t>,
+// <r N>, <rc N>, <rd N>), be at most 65530 characters (one netlink
+// attribute) and describe at most 65535 bytes.
 //
 // Only fields that are set are checked, so a partial update is validated on
 // its own; relations to values already on the device cannot be checked here
@@ -53,25 +66,20 @@ func (cfg *Config) Validate() error {
 		if ka := p.PersistentKeepaliveInterval; ka != nil && (*ka < 0 || *ka > 0xffff*time.Second) {
 			return fmt.Errorf("wgtypes: peer %s: PersistentKeepaliveInterval must be 0-65535s, got %s", p.PublicKey, *ka)
 		}
-	}
-
-	u16 := []struct {
-		name string
-		v    *int
-	}{{"Jc", cfg.Jc}, {"Jmin", cfg.Jmin}, {"Jmax", cfg.Jmax}}
-	for _, f := range u16 {
-		if f.v != nil && (*f.v < 0 || *f.v > 0xffff) {
-			return fmt.Errorf("wgtypes: %s must be 0-65535, got %d", f.name, *f.v)
+		if p.Endpoint != nil && (p.Endpoint.Port < 0 || p.Endpoint.Port > 0xffff) {
+			return fmt.Errorf("wgtypes: peer %s: Endpoint port must be 0-65535, got %d", p.PublicKey, p.Endpoint.Port)
 		}
 	}
-	if cfg.Jmax != nil && *cfg.Jmax >= maxMessageSize {
-		return fmt.Errorf("wgtypes: Jmax must be below %d, got %d", maxMessageSize, *cfg.Jmax)
-	}
-	// With junk packets on, the kernel bumps Jmax by one when Jmin == Jmax,
-	// which must still stay below 65535.
-	if cfg.Jmin != nil && cfg.Jmax != nil && *cfg.Jmax == maxMessageSize-1 &&
-		*cfg.Jmin == *cfg.Jmax && (cfg.Jc == nil || *cfg.Jc != 0) {
-		return fmt.Errorf("wgtypes: Jmin = Jmax = %d is too large (the kernel uses Jmax+1)", *cfg.Jmax)
+
+	junk := []struct {
+		name string
+		v    *int
+		max  int
+	}{{"Jc", cfg.Jc, maxJunkCount}, {"Jmin", cfg.Jmin, maxJunkSize}, {"Jmax", cfg.Jmax, maxJunkSize}}
+	for _, f := range junk {
+		if f.v != nil && (*f.v < 0 || *f.v > f.max) {
+			return fmt.Errorf("wgtypes: %s must be 0-%d, got %d", f.name, f.max, *f.v)
+		}
 	}
 	if cfg.Jmin != nil && cfg.Jmax != nil && *cfg.Jmax != 0 && *cfg.Jmin > *cfg.Jmax {
 		return fmt.Errorf("wgtypes: Jmin (%d) must be <= Jmax (%d)", *cfg.Jmin, *cfg.Jmax)
@@ -121,6 +129,9 @@ func (cfg *Config) Validate() error {
 	for i, spec := range []*string{cfg.I1, cfg.I2, cfg.I3, cfg.I4, cfg.I5} {
 		if spec == nil {
 			continue
+		}
+		if len(*spec) > maxInitSpecLen {
+			return fmt.Errorf("wgtypes: I%d must be at most %d characters, got %d", i+1, maxInitSpecLen, len(*spec))
 		}
 		if _, err := InitPacketSize(*spec); err != nil {
 			return fmt.Errorf("wgtypes: I%d: %w", i+1, err)

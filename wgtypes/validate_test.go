@@ -1,6 +1,7 @@
 package wgtypes_test
 
 import (
+	"net"
 	"strconv"
 	"strings"
 	"testing"
@@ -29,22 +30,23 @@ func TestConfigValidate(t *testing.T) {
 		{name: "keepalive max", cfg: wgtypes.Config{Peers: []wgtypes.PeerConfig{{PersistentKeepaliveInterval: durPtr(65535 * time.Second)}}}},
 		{name: "keepalive above u16", cfg: wgtypes.Config{Peers: []wgtypes.PeerConfig{{PersistentKeepaliveInterval: durPtr(70000 * time.Second)}}}, wantErr: "PersistentKeepaliveInterval must be 0-65535s, got 19h26m40s"},
 		{name: "keepalive negative", cfg: wgtypes.Config{Peers: []wgtypes.PeerConfig{{PersistentKeepaliveInterval: durPtr(-time.Second)}}}, wantErr: "PersistentKeepaliveInterval must be"},
+		{name: "endpoint port max", cfg: wgtypes.Config{Peers: []wgtypes.PeerConfig{{Endpoint: &net.UDPAddr{IP: net.IPv4(192, 0, 2, 1), Port: 65535}}}}},
+		{name: "endpoint port above u16", cfg: wgtypes.Config{Peers: []wgtypes.PeerConfig{{Endpoint: &net.UDPAddr{IP: net.IPv4(192, 0, 2, 1), Port: 70000}}}}, wantErr: "Endpoint port must be 0-65535, got 70000"},
+		{name: "endpoint port negative", cfg: wgtypes.Config{Peers: []wgtypes.PeerConfig{{Endpoint: &net.UDPAddr{IP: net.IPv4(192, 0, 2, 1), Port: -1}}}}, wantErr: "Endpoint port must be"},
 
-		// Jc / Jmin / Jmax: 16-bit, Jmax < 65535, Jmin <= Jmax
-		{name: "Jc above old limit 10", cfg: wgtypes.Config{Jc: intPtr(128)}},
+		// Jc / Jmin / Jmax: the kernel's AWG_JC_MAX 128 and AWG_JUNK_SIZE_MAX 1280, Jmin <= Jmax
+		{name: "Jc max", cfg: wgtypes.Config{Jc: intPtr(128)}},
 		{name: "Jc 0", cfg: wgtypes.Config{Jc: intPtr(0)}},
-		{name: "Jc max u16", cfg: wgtypes.Config{Jc: intPtr(65535)}},
-		{name: "Jc above u16", cfg: wgtypes.Config{Jc: intPtr(65536)}, wantErr: "Jc must be 0-65535"},
+		{name: "Jc above the kernel limit", cfg: wgtypes.Config{Jc: intPtr(129)}, wantErr: "Jc must be 0-128, got 129"},
 		{name: "Jc negative", cfg: wgtypes.Config{Jc: intPtr(-1)}, wantErr: "Jc must be"},
 		{name: "Jmin below old limit 64", cfg: wgtypes.Config{Jmin: intPtr(1), Jmax: intPtr(40)}},
 		{name: "Jmax 1280", cfg: wgtypes.Config{Jmin: intPtr(64), Jmax: intPtr(1280)}},
+		{name: "Jmax above the kernel limit", cfg: wgtypes.Config{Jmin: intPtr(64), Jmax: intPtr(1281)}, wantErr: "Jmax must be 0-1280, got 1281"},
+		{name: "Jmin above the kernel limit", cfg: wgtypes.Config{Jmin: intPtr(1281)}, wantErr: "Jmin must be 0-1280, got 1281"},
 		{name: "Jmin == Jmax", cfg: wgtypes.Config{Jmin: intPtr(100), Jmax: intPtr(100)}},
+		{name: "Jmin = Jmax = 1280 with junk", cfg: wgtypes.Config{Jc: intPtr(3), Jmin: intPtr(1280), Jmax: intPtr(1280)}},
 		{name: "Jmin > Jmax", cfg: wgtypes.Config{Jmin: intPtr(200), Jmax: intPtr(100)}, wantErr: "Jmin (200) must be <= Jmax (100)"},
 		{name: "Jmin with Jmax 0 (junk off)", cfg: wgtypes.Config{Jmin: intPtr(200), Jmax: intPtr(0)}},
-		{name: "Jmax 65534", cfg: wgtypes.Config{Jmin: intPtr(10), Jmax: intPtr(65534)}},
-		{name: "Jmax 65535", cfg: wgtypes.Config{Jmax: intPtr(65535)}, wantErr: "Jmax must be below 65535"},
-		{name: "Jmin = Jmax = 65534 with junk", cfg: wgtypes.Config{Jc: intPtr(3), Jmin: intPtr(65534), Jmax: intPtr(65534)}, wantErr: "Jmax+1"},
-		{name: "Jmin = Jmax = 65534 without junk", cfg: wgtypes.Config{Jc: intPtr(0), Jmin: intPtr(65534), Jmax: intPtr(65534)}},
 
 		// S1-S4: padding + message size <= 65535
 		{name: "S1 above old limit 64", cfg: wgtypes.Config{S1: intPtr(1132)}},
@@ -92,6 +94,9 @@ func TestConfigValidate(t *testing.T) {
 		{name: "I max size", cfg: wgtypes.Config{I1: strPtr("<r 65531><c>")}},
 		{name: "I too large", cfg: wgtypes.Config{I1: strPtr("<r 65532><c>")}, wantErr: "exceed 65535"},
 		{name: "I int overflow sum", cfg: wgtypes.Config{I1: strPtr("<r 2147483647><r 2147483647><b 0x0102>")}, wantErr: "exceed 65535"},
+		// One netlink attribute; the UAPI line "i1=..." must fit the 64 KiB parser line
+		{name: "I longest text", cfg: wgtypes.Config{I1: strPtr("<t>" + strings.Repeat(" ", 65530-3))}},
+		{name: "I text too long", cfg: wgtypes.Config{I1: strPtr("<t>" + strings.Repeat(" ", 65531-3))}, wantErr: "I1 must be at most 65530 characters, got 65531"},
 
 		{
 			name: "full valid config",
