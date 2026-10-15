@@ -169,7 +169,7 @@ func hasAWGFields(cfg wgtypes.Config) bool {
 		}
 	}
 	for _, p := range cfg.Peers {
-		if p.AdvancedSecurity {
+		if p.AdvancedSecurity || p.DisableAdvancedSecurity {
 			return true
 		}
 	}
@@ -293,7 +293,8 @@ func buildBatches(cfg wgtypes.Config) []wgtypes.Config {
 
 				// AdvancedSecurity must be present in every chunk so the
 				// kernel enables AWG obfuscation regardless of batch order.
-				AdvancedSecurity: p.AdvancedSecurity,
+				AdvancedSecurity:        p.AdvancedSecurity,
+				DisableAdvancedSecurity: p.DisableAdvancedSecurity,
 
 				// The IPs for this chunk.
 				AllowedIPs: tmp,
@@ -348,8 +349,9 @@ func encodePeer(p wgtypes.PeerConfig) func(ae *netlink.AttributeEncoder) error {
 			flags |= unix.WGPEER_F_UPDATE_ONLY
 		}
 		// WGPEER_F_HAS_ADVANCED_SECURITY must be set whenever we want
-		// the kernel to pay attention to WGPEER_A_ADVANCED_SECURITY.
-		if p.AdvancedSecurity {
+		// the kernel to pay attention to WGPEER_A_ADVANCED_SECURITY; sent
+		// without it, the flag switches obfuscation off.
+		if p.AdvancedSecurity || p.DisableAdvancedSecurity {
 			flags |= WGPEER_F_HAS_ADVANCED_SECURITY
 		}
 		if flags != 0 {

@@ -860,3 +860,43 @@ func generateIPs(n int) []net.IPNet {
 
 	return ips
 }
+
+// LIB-04: DisableAdvancedSecurity sends the flag without the attribute,
+// which the kernel reads as "off" for the peer.
+func TestLinuxClientConfigureDevicePeerDisableAdvancedSecurity(t *testing.T) {
+	peerKey := wgtest.MustPublicKey()
+	cfg := wgtypes.Config{Peers: []wgtypes.PeerConfig{{PublicKey: peerKey, DisableAdvancedSecurity: true}}}
+	wantAttrs := []netlink.Attribute{
+		{Type: unix.WGDEVICE_A_IFNAME, Data: nlenc.Bytes(okName)},
+		{
+			Type: netlink.Nested | unix.WGDEVICE_A_PEERS,
+			Data: m(netlink.Attribute{
+				Type: netlink.Nested,
+				Data: m([]netlink.Attribute{
+					{Type: unix.WGPEER_A_PUBLIC_KEY, Data: peerKey[:]},
+					{Type: unix.WGPEER_A_FLAGS, Data: nlenc.Uint32Bytes(WGPEER_F_HAS_ADVANCED_SECURITY)},
+				}...),
+			}),
+		},
+	}
+	fn := func(greq genetlink.Message, _ netlink.Message) ([]genetlink.Message, error) {
+		attrs, err := netlink.UnmarshalAttributes(greq.Data)
+		if err != nil {
+			return nil, err
+		}
+		if diff := diffAttrs(wantAttrs, attrs); diff != "" {
+			t.Fatalf("unexpected attributes (-want +got):\n%s", diff)
+		}
+		return []genetlink.Message{{}}, nil
+	}
+	c := testAWGClient(t, configureHandler(fn))
+	defer c.Close()
+	if err := c.ConfigureDevice(context.Background(), okName, cfg); err != nil {
+		t.Fatalf("failed to configure: %v", err)
+	}
+
+	both := wgtypes.Config{Peers: []wgtypes.PeerConfig{{PublicKey: peerKey, AdvancedSecurity: true, DisableAdvancedSecurity: true}}}
+	if err := both.Validate(); err == nil {
+		t.Fatal("both flags set: no error")
+	}
+}

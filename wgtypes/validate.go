@@ -69,6 +69,9 @@ func (cfg *Config) Validate() error {
 		if p.Endpoint != nil && (p.Endpoint.Port < 0 || p.Endpoint.Port > 0xffff) {
 			return fmt.Errorf("wgtypes: peer %s: Endpoint port must be 0-65535, got %d", p.PublicKey, p.Endpoint.Port)
 		}
+		if p.AdvancedSecurity && p.DisableAdvancedSecurity {
+			return fmt.Errorf("wgtypes: peer %s: AdvancedSecurity and DisableAdvancedSecurity are both set", p.PublicKey)
+		}
 	}
 
 	junk := []struct {

@@ -482,5 +482,16 @@ type PeerConfig struct {
 	// When true, the kernel sets WGPEER_F_HAS_ADVANCED_SECURITY and
 	// WGPEER_A_ADVANCED_SECURITY on the peer. Only effective when the
 	// device itself has AWG parameters configured.
+	//
+	// false means "leave it as it is", not "off" (LIB-04): nothing is sent.
+	// To switch obfuscation off for a peer, set DisableAdvancedSecurity.
+	// Kernel (netlink) only: the userspace UAPI has no per-peer setting, so
+	// amneziawg-go ignores both fields.
 	AdvancedSecurity bool
+
+	// DisableAdvancedSecurity switches AmneziaWG obfuscation off for this
+	// peer: WGPEER_F_HAS_ADVANCED_SECURITY is sent without
+	// WGPEER_A_ADVANCED_SECURITY. Setting it together with AdvancedSecurity
+	// is an error (Config.Validate).
+	DisableAdvancedSecurity bool
 }
