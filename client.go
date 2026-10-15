@@ -53,14 +53,24 @@ func (c *Client) Close() error {
 // interface name), only the first occurrence is kept. This prevents
 // duplicates when, for example, both kernel and userspace clients
 // discover the same interface.
+//
+// A backend that fails does not hide the devices of the others (LIB-03:
+// one unreadable userspace socket returned no devices at all): Devices
+// returns what the other backends found together with the errors, joined.
+// A caller that only checks err sees the failure as before.
 func (c *Client) Devices(ctx context.Context) ([]*wgtypes.Device, error) {
 	seen := make(map[string]struct{})
 	var out []*wgtypes.Device
+	var errs []error
 
 	for _, wgc := range c.cs {
 		devs, err := wgc.Devices(ctx)
 		if err != nil {
-			return nil, err
+			if ctx.Err() != nil {
+				return out, err
+			}
+			errs = append(errs, err)
+			continue
 		}
 
 		for _, d := range devs {
@@ -72,7 +82,7 @@ func (c *Client) Devices(ctx context.Context) ([]*wgtypes.Device, error) {
 		}
 	}
 
-	return out, nil
+	return out, errors.Join(errs...)
 }
 
 // Device retrieves a WireGuard device by its interface name.

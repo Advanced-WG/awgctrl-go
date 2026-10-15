@@ -35,8 +35,11 @@ func main() {
 		devices = append(devices, d)
 	} else {
 		devices, err = c.Devices(ctx)
-		if err != nil {
+		if err != nil && len(devices) == 0 {
 			log.Fatalf("failed to get devices: %v", err)
+		} else if err != nil {
+			// the backends that answered are listed (LIB-03)
+			log.Printf("some devices could not be read: %v", err)
 		}
 	}
 

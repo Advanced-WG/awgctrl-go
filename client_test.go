@@ -343,3 +343,23 @@ func TestClientConfigureDeviceValidatesAgainstDevice(t *testing.T) {
 		})
 	}
 }
+
+// LIB-03: a backend that fails does not hide the devices of the others.
+func TestClientDevicesOneBackendFails(t *testing.T) {
+	broken := errors.New("userspace socket unreadable")
+	c := &Client{
+		cs: []wginternal.Client{
+			&testClient{DevicesFunc: func(context.Context) ([]*wgtypes.Device, error) { return nil, broken }},
+			&testClient{DevicesFunc: func(context.Context) ([]*wgtypes.Device, error) {
+				return []*wgtypes.Device{{Name: "awg0"}}, nil
+			}},
+		},
+	}
+	devs, err := c.Devices(context.Background())
+	if !errors.Is(err, broken) {
+		t.Fatalf("the failure is not reported: %v", err)
+	}
+	if len(devs) != 1 || devs[0].Name != "awg0" {
+		t.Fatalf("devices of the working backend: %+v", devs)
+	}
+}
