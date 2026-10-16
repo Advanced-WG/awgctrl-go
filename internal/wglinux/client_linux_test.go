@@ -620,8 +620,12 @@ func TestLinuxClientErrorsNameTheDevice(t *testing.T) {
 		serr := c.ConfigureDevice(context.Background(), "wg7", wgtypes.Config{})
 		c.Close()
 		for op, err := range map[string]error{"set device": serr} {
-			if !errors.Is(err, tt.errno) || errors.Is(err, os.ErrNotExist) != tt.notExist {
-				t.Errorf("%v %s: %v", tt.errno, op, err)
+			if errors.Is(err, os.ErrNotExist) != tt.notExist || os.IsNotExist(err) != tt.notExist {
+				t.Errorf("%v %s: not-exist %v: %v", tt.errno, op, tt.notExist, err)
+			}
+			// a missing device says why; any other errno still matches
+			if tt.notExist && !strings.Contains(fmt.Sprint(err), tt.errno.Error()) || !tt.notExist && !errors.Is(err, tt.errno) {
+				t.Errorf("%v %s: errno lost: %v", tt.errno, op, err)
 			}
 			// os.IsPermission does not follow %w (the GitHub CI run of
 			// TestLinuxClientIsPermission failed on that)

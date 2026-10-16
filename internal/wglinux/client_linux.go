@@ -302,7 +302,8 @@ func (c *Client) getDeviceInternal(name string, family genetlink.Family) (*wgtyp
 // A failure names the command and the device (LIB-01: the bare errno came
 // back, "operation not supported" with nothing to say where). ENODEV and
 // ENOTSUP, a device that is gone or is not WireGuard, still match
-// os.ErrNotExist, and every errno still matches with errors.Is. The other
+// os.ErrNotExist, with os.IsNotExist too, and every other errno still
+// matches with errors.Is. The other
 // errnos come in an *os.SyscallError, so os.IsPermission and the other
 // os.Is* helpers, which do not follow %w, still see EPERM and EACCES.
 func (c *Client) execute(family genetlink.Family, command uint8, flags netlink.HeaderFlags, attrb []byte, device string) ([]genetlink.Message, error) {
@@ -330,7 +331,9 @@ func (c *Client) execute(family genetlink.Family, command uint8, flags netlink.H
 
 	switch oerr.Err {
 	case unix.ENODEV, unix.ENOTSUP:
-		return nil, fmt.Errorf("wglinux: %s %q (%s): no such WireGuard device: %w: %w", op, device, family.Name, os.ErrNotExist, oerr.Err)
+		// os.ErrNotExist itself inside the *os.SyscallError: os.IsNotExist
+		// sees it as it did before the wrapping (and errors.Is too)
+		return nil, os.NewSyscallError(fmt.Sprintf("wglinux: %s %q (%s): no such WireGuard device (%v)", op, device, family.Name, oerr.Err), os.ErrNotExist)
 	default:
 		return nil, os.NewSyscallError(fmt.Sprintf("wglinux: %s %q (%s)", op, device, family.Name), oerr.Err)
 	}
