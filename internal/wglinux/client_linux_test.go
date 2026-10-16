@@ -623,6 +623,11 @@ func TestLinuxClientErrorsNameTheDevice(t *testing.T) {
 			if !errors.Is(err, tt.errno) || errors.Is(err, os.ErrNotExist) != tt.notExist {
 				t.Errorf("%v %s: %v", tt.errno, op, err)
 			}
+			// os.IsPermission does not follow %w (the GitHub CI run of
+			// TestLinuxClientIsPermission failed on that)
+			if tt.errno == unix.EPERM && !os.IsPermission(err) {
+				t.Errorf("%v %s: os.IsPermission is false: %v", tt.errno, op, err)
+			}
 			if err == nil || !strings.Contains(err.Error(), op+` "wg7"`) {
 				t.Errorf("%v: the error does not name %s of wg7: %v", tt.errno, op, err)
 			}
